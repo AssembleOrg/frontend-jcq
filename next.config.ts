@@ -39,14 +39,13 @@ const nextConfig: NextConfig = {
   },
 
   // Proxy to backend API
-  // Configure NEXT_PUBLIC_BACKEND_URL in your environment variables
   async rewrites() {
     const backendUrl =
       process.env.NEXT_PUBLIC_BACKEND_URL ||
       process.env.NEXT_PUBLIC_BASE_URL ||
-      "http://localhost:3000";
+      "http://localhost:3000"; // Fallback for local development
 
-    console.log("🔗 Backend Proxy URL:", backendUrl);
+    console.log("🔗 Backend Proxy URL (rewrites):", backendUrl);
 
     return [
       {

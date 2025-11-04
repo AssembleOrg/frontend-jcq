@@ -30,9 +30,18 @@ RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# Accept build arguments for Next.js public env vars
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_BASE_URL
+
+# Make them available during build
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_BASE_URL=$NEXT_PUBLIC_BASE_URL
+
 # Build Next.js application
 # This will do the type checking and create optimized production build
-RUN pnpm build
+RUN echo "🔨 Building with NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL" && \
+    pnpm build
 
 # Production image, copy all the files and run next
 FROM base AS runner
