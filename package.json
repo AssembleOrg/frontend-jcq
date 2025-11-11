@@ -24,6 +24,7 @@
     "@mantine/core": "^8.3.6",
     "@mantine/dates": "^8.3.6",
     "@mantine/hooks": "^8.3.6",
+    "@react-pdf/renderer": "^4.3.1",
     "@tabler/icons-react": "^3.35.0",
     "axios": "^1.12.2",
     "class-variance-authority": "^0.7.1",

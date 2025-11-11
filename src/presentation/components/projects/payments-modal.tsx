@@ -111,12 +111,17 @@ export function PaymentsModal({
       console.log("✅ Paid created successfully", newPaid);
       
       // Generate PDF receipt automatically after creating the payment
+      // includeRemaining: true para mostrar el saldo restante cuando se crea un pago
       if (newPaid && project.client) {
         console.log("📄 Generating PDF receipt...");
-        generatePaymentReceipt({
+        await generatePaymentReceipt({
           paid: newPaid,
           client: project.client,
-          projectName: project.locationAddress || "Proyecto",
+          projectName: project.event 
+            ? `${project.client.fullname} - ${project.event}`
+            : project.client.fullname,
+          project: project,
+          includeRemaining: true, // Muestra el saldo restante al crear el pago
         });
       }
       
@@ -164,7 +169,7 @@ export function PaymentsModal({
     }
   };
 
-  const handleGenerateReceipt = (paidId: string) => {
+  const handleGenerateReceipt = async (paidId: string) => {
     if (!project?.client) {
       alert("No se puede generar el comprobante: falta información del cliente");
       return;
@@ -173,10 +178,15 @@ export function PaymentsModal({
     const paid = paids.find((p) => p.id === paidId);
     if (!paid) return;
 
-    generatePaymentReceipt({
+    // includeRemaining: false para NO mostrar el saldo restante al re-descargar
+    await generatePaymentReceipt({
       paid,
       client: project.client,
-      projectName: `Proyecto #${project.id} - ${project.locationAddress}`,
+      projectName: project.event 
+        ? `${project.client.fullname} - ${project.event}`
+        : project.client.fullname,
+      project: project,
+      includeRemaining: false, // No muestra el saldo restante al descargar desde la lista
     });
   };
 

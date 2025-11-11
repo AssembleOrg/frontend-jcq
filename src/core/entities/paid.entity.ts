@@ -6,6 +6,7 @@ export interface Paid {
   date: string;
   bill: string;
   projectId: string;
+  number: string;
   project?: Project;
   createdAt: string;
   updatedAt: string;

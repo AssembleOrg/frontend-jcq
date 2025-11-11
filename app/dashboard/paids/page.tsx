@@ -80,13 +80,13 @@ export default function PaidsPage() {
     }
   };
 
-  const handleGenerateReceipt = (paid: Paid) => {
+  const handleGenerateReceipt = async (paid: Paid) => {
     if (!paid.project?.client) {
       alert("No se puede generar el comprobante: falta información del cliente");
       return;
     }
 
-    generatePaymentReceipt({
+    await generatePaymentReceipt({
       paid,
       client: paid.project.client,
       projectName: `Proyecto #${paid.project.id}`,

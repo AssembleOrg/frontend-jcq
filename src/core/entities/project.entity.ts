@@ -29,6 +29,7 @@ export interface Project {
   locationLat: number | null;
   locationLng: number | null;
   workers: number;
+  event: string;
   dateInit: string;
   dateEnd: string;
   createdAt: string;
@@ -42,6 +43,7 @@ export interface CreateProjectDto {
   locationLat?: number;
   locationLng?: number;
   workers: number;
+  event: string;
   dateInit: string;
   dateEnd: string;
 }
@@ -52,6 +54,7 @@ export interface UpdateProjectDto {
   locationLat?: number;
   locationLng?: number;
   workers?: number;
+  event?: string;
   dateInit?: string;
   dateEnd?: string;
 }

@@ -35,6 +35,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     locationLat: "",
     locationLng: "",
     workers: "",
+    event: "",
     dateInit: "",
     dateEnd: "",
   });
@@ -56,6 +57,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         locationLat: project.locationLat?.toString() || "",
         locationLng: project.locationLng?.toString() || "",
         workers: project.workers.toString(),
+        event: project.event || "",
         dateInit: project.dateInit.split("T")[0],
         dateEnd: project.dateEnd.split("T")[0],
       });
@@ -67,6 +69,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         locationLat: "",
         locationLng: "",
         workers: "",
+        event: "",
         dateInit: "",
         dateEnd: "",
       });
@@ -89,6 +92,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
           ? parseFloat(formData.locationLng)
           : undefined,
         workers: parseInt(formData.workers),
+        event: formData.event.trim(),
         dateInit: formData.dateInit,
         dateEnd: formData.dateEnd,
       };
@@ -192,6 +196,24 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
             value={formData.locationAddress}
             onChange={(e) =>
               setFormData({ ...formData, locationAddress: e.target.value })
+            }
+            required
+            styles={{
+              label: { color: "#e5e7eb", marginBottom: "0.5rem" },
+              input: {
+                backgroundColor: "#2d2d2d",
+                borderColor: "#404040",
+                color: "white",
+              },
+            }}
+          />
+
+          <TextInput
+            label="Evento"
+            placeholder="Ingrese el nombre del evento"
+            value={formData.event}
+            onChange={(e) =>
+              setFormData({ ...formData, event: e.target.value })
             }
             required
             styles={{

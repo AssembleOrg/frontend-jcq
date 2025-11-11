@@ -136,7 +136,9 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
           <Group justify="space-between" align="flex-start">
             <Stack gap={4} style={{ flex: 1 }}>
               <Text size="lg" fw={600} c="white">
-                {project.client.fullname}
+                {project.event 
+                  ? `${project.client.fullname} - ${project.event}`
+                  : project.client.fullname}
               </Text>
               <Group gap="xs">
                 <MapPin size={16} color="#9ca3af" />
