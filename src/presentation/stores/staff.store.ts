@@ -36,7 +36,6 @@ export const useStaffStore = create<StaffState>((set, get) => ({
   fetchStaff: async (filters?: StaffFilters) => {
     const currentTimestamp = Date.now();
     
-    // Prevent race condition (igual que en clientes)
     if (get().isLoading && currentTimestamp - get().lastFetchTimestamp < 1000) {
       return;
     }
@@ -44,15 +43,11 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     set({ isLoading: true, error: null, lastFetchTimestamp: currentTimestamp });
 
     try {
-      // Usamos el método getAll o getPaginated según corresponda
-      // Como tu backend actual devuelve un array en /api/staff:
       const staffData = await staffApi.getAll(filters);
       
       if (currentTimestamp >= get().lastFetchTimestamp) {
         set({
           staffList: staffData,
-          // Si tu backend no devuelve meta aún, lo dejamos null o lo simulamos
-          meta: null, 
           isLoading: false,
         });
       }
@@ -72,7 +67,6 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     try {
       const newStaff = await staffApi.create(data);
       
-      // Actualizamos la lista localmente para que se vea rápido
       set((state) => ({
         staffList: [newStaff, ...state.staffList],
         isLoading: false,
@@ -88,14 +82,42 @@ export const useStaffStore = create<StaffState>((set, get) => ({
     }
   },
 
-  // Implementamos update y delete igual que en clientes...
   updateStaff: async (id: string, data: UpdateStaffDto) => {
-     // ... (Lógica similar a updateClient)
-     return {} as Staff; // Placeholder si no tienes el endpoint listo
+     set({ isLoading: true, error: null });
+         try {
+           const updatedStaff = await staffApi.update(id, data);
+           set((state) => ({
+             staff: state.staffList.map((c) => (c.id === id ? updatedStaff : c)),
+             selectedStaff: state.selectedStaff?.id === id ? updatedStaff : state.selectedStaff,
+             isLoading: false,
+           }));
+     
+           return updatedStaff;
+         } catch (error: unknown) {
+           set({
+             isLoading: false,
+             error: error instanceof Error ? error.message : String(error) || 'Error al actualizar empleado',
+           });
+           throw error;
+         }
   },
 
   deleteStaff: async (id: string) => {
-    // ... (Lógica similar a deleteClient)
+    set({ isLoading: true, error: null });
+    try {
+          await staffApi.delete(id);
+          set((state) => ({
+            staff: state.staffList.filter((c) => c.id !== id),
+            selectedStaff: state.selectedStaff?.id === id ? null : state.selectedStaff,
+            isLoading: false,
+          }));
+        } catch (error: unknown) {
+          set({
+            isLoading: false,
+            error: error instanceof Error ? error.message : String(error) || 'Error al eliminar empleado',
+          });
+          throw error;
+        }
   },
 
   setSelectedStaff: (staff: Staff | null) => set({ selectedStaff: staff }),
