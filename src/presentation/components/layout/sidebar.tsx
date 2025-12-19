@@ -10,6 +10,7 @@ import {
   LogOut,
   Building2,
   Building,
+  PersonStanding,
   X,
   Newspaper,
   DollarSign,
@@ -69,6 +70,12 @@ const navigation = [
     name: "Presupuestos",
     href: "/dashboard/budgets",
     icon: Newspaper,
+    roles: ["ADMIN", "SUBADMIN", "MANAGER"],
+  },
+  {
+    name: "Colaboradores",
+    href: "/dashboard/collaborators",
+    icon: PersonStanding,
     roles: ["ADMIN", "SUBADMIN", "MANAGER"],
   },
   {
