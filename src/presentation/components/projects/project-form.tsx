@@ -17,8 +17,11 @@ import {
   Grid,
   Stack,
   Divider,
+  Box,
+  Text,
 } from "@mantine/core";
 import { ProjectStructuresSelector, SelectedItem } from "./project-structure-selector";
+import { useCollaboratorsStore } from "@/src/presentation/stores/collaborators.store";
 
 interface ProjectFormProps {
   isOpen: boolean;
@@ -29,6 +32,14 @@ interface ProjectFormProps {
 export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
   const { createProject, updateProject, isLoading } = useProjectsStore();
   const { clients, fetchAllClients } = useClientsStore();
+  const { collaboratorSelector, fetchCollaboratorSelector } = useCollaboratorsStore();
+
+  useEffect(() => {
+    if (isOpen) {
+      fetchAllClients();
+      fetchCollaboratorSelector(); // Cargar la lista para el select
+    }
+  }, [isOpen, fetchAllClients, fetchCollaboratorSelector]);
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -40,16 +51,11 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     event: "",
     dateInit: "",
     dateEnd: "",
+    collaboratorId: "",
+    collabWorkersCount: "", // Nuevo campo para personal externo
   });
 
   const [selectedStructures, setSelectedStructures] = useState<SelectedItem[]>([]);
-
-  useEffect(() => {
-    if (isOpen && clients.length === 0) {
-      fetchAllClients();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
 
   useEffect(() => {
     if (project) {
@@ -59,30 +65,25 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         locationAddress: project.locationAddress || "",
         locationLat: project.locationLat?.toString() || "",
         locationLng: project.locationLng?.toString() || "",
-        workers: project.workers.toString(),
+        workers: project.workers?.toString() || "",
         event: project.event || "",
-        dateInit: project.dateInit.split("T")[0],
-        dateEnd: project.dateEnd.split("T")[0],
+        dateInit: project.dateInit ? new Date(project.dateInit).toISOString().split('T')[0] : "",
+        dateEnd: project.dateEnd ? new Date(project.dateEnd).toISOString().split('T')[0] : "",
+        collaboratorId: project.collaboratorId || "",
+        collabWorkersCount: project.collabWorkersCount?.toString() || "",
       });
 
-      // Logica de carga de estructuras
-      if (project.structures && project.structures.length > 0) {
-        const mappedStructures: SelectedItem[] = project.structures.map((ps) => {
-          return {
-            structureId: ps.structureId,
-            name: ps.structure.name,
-            quantity: ps.quantity,
-            maxStock: ps.structure.stock + ps.quantity 
-          };
-        });
-        setSelectedStructures(mappedStructures);
-      } else {
-        setSelectedStructures([]);
+      if (project.structures) {
+        setSelectedStructures(
+          project.structures.map((item) => ({
+            structureId: item.structureId,
+            quantity: item.quantity,
+            name: item.structure.name,
+            maxStock: item.structure.stock,
+          }))
+        );
       }
-
-
     } else {
-      // Limpiar para nuevo proyecto
       setFormData({
         amount: "",
         clientId: "",
@@ -93,6 +94,8 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         event: "",
         dateInit: "",
         dateEnd: "",
+        collaboratorId: "",
+        collabWorkersCount: "",
       });
       setSelectedStructures([]);
     }
@@ -102,197 +105,156 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const payload = {
+      ...formData,
+      amount: Number(formData.amount),
+      workers: formData.workers ? Number(formData.workers) : 0,
+      locationLat: formData.locationLat ? Number(formData.locationLat) : undefined,
+      locationLng: formData.locationLng ? Number(formData.locationLng) : undefined,
+      collaboratorId: formData.collaboratorId || undefined,
+      // Solo se envia la cantidad de personal externo si hay un colaborador seleccionado
+      collabWorkersCount: formData.collaboratorId ? Number(formData.collabWorkersCount) : undefined,
+      structures: selectedStructures.map(({ structureId, quantity }) => ({
+        structureId,
+        quantity,
+      })),
+    };
+
     try {
-      const structuresPayload = selectedStructures.map(s => ({
-        structureId: s.structureId,
-        quantity: s.quantity
-      }));
-
-      const data = {
-        amount: parseFloat(formData.amount),
-        clientId: formData.clientId,
-        locationAddress: formData.locationAddress,
-        locationLat: formData.locationLat
-          ? parseFloat(formData.locationLat)
-          : undefined,
-        locationLng: formData.locationLng
-          ? parseFloat(formData.locationLng)
-          : undefined,
-        workers: parseInt(formData.workers),
-        event: formData.event.trim(),
-        dateInit: formData.dateInit,
-        dateEnd: formData.dateEnd,
-        structures: structuresPayload 
-      };
-
       if (project) {
-        await updateProject(project.id, data as UpdateProjectDto);
+        await updateProject(project.id, payload as UpdateProjectDto);
       } else {
-        await createProject(data as unknown as CreateProjectDto);
+        await createProject(payload as CreateProjectDto);
       }
-
       onClose();
     } catch (error) {
       console.error(error);
     }
   };
 
-  const clientOptions = clients.map((client) => ({
-    value: client.id,
-    label: client.fullname,
-  }));
+  const labelStyle = { color: "#e5e7eb", marginBottom: "0.5rem" };
+  const inputStyle = {
+    backgroundColor: "#2d2d2d",
+    borderColor: "#404040",
+    color: "white",
+  };
 
   return (
     <Modal
       opened={isOpen}
       onClose={onClose}
       title={project ? "Editar Proyecto" : "Nuevo Proyecto"}
-      size="lg"
+      size="xl"
+      centered
       styles={{
-        content: {
-          backgroundColor: "#1a1a1a",
-        },
-        header: {
-          backgroundColor: "#1a1a1a",
-          borderBottom: "1px solid #2d2d2d",
-        },
-        title: {
-          color: "white",
-          fontSize: "1.25rem",
-          fontWeight: 600,
-        },
-        body: {
-          padding: "1.5rem",
-        },
+        content: { backgroundColor: "#1a1a1a", color: "white" },
+        header: { backgroundColor: "#1a1a1a", color: "white" },
       }}
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
-          {/* Datos */}
-          <Grid gutter="md">
+          <Grid>
             <Grid.Col span={6}>
               <Select
                 label="Cliente"
-                placeholder="Seleccionar cliente"
-                data={clientOptions}
+                placeholder="Seleccione un cliente"
+                data={clients.map((c) => ({ value: c.id, label: c.fullname }))}
                 value={formData.clientId}
-                onChange={(value) =>
-                  setFormData({ ...formData, clientId: value || "" })
-                }
+                onChange={(value) => setFormData({ ...formData, clientId: value || "" })}
                 required
                 searchable
-                styles={{
-                  label: { color: "#e5e7eb", marginBottom: "0.5rem" },
-                  input: {
-                    backgroundColor: "#2d2d2d",
-                    borderColor: "#404040",
-                    color: "white",
-                  },
-                  dropdown: {
-                    backgroundColor: "#1a1a1a",
-                    borderColor: "#2d2d2d",
-                    color: "white"
-                  },
-                  option: { 
-                    '&[data-hovered]': { backgroundColor: "#2d2d2d" },
-                    '&[data-selected]': { backgroundColor: "#f97316", color: "white" } 
-                  }
-                }}
+                styles={{ label: labelStyle, input: inputStyle }}
               />
             </Grid.Col>
-
             <Grid.Col span={6}>
-              <NumberInput
-                label="Monto Total"
-                placeholder="500.000"
-                value={
-                  formData.amount ? parseFloat(formData.amount) : undefined
-                }
-                onChange={(value) =>
-                  setFormData({ ...formData, amount: value?.toString() || "" })
-                }
+              <TextInput
+                label="Evento / Nombre"
+                placeholder="Ej: Boda de Juan y Ana"
+                value={formData.event}
+                onChange={(e) => setFormData({ ...formData, event: e.target.value })}
                 required
-                min={0}
-                hideControls
-                thousandSeparator="."
-                decimalSeparator=","
-                decimalScale={0}
-                prefix="$ "
-                styles={{
-                  label: { color: "#e5e7eb", marginBottom: "0.5rem" },
-                  input: {
-                    backgroundColor: "#2d2d2d",
-                    borderColor: "#404040",
-                    color: "white",
-                  },
-                }}
+                styles={{ label: labelStyle, input: inputStyle }}
               />
             </Grid.Col>
           </Grid>
 
           <TextInput
             label="Dirección"
-            placeholder="Av. Corrientes 1234, CABA"
+            placeholder="Calle, Ciudad, Provincia"
             value={formData.locationAddress}
-            onChange={(e) =>
-              setFormData({ ...formData, locationAddress: e.target.value })
-            }
+            onChange={(e) => setFormData({ ...formData, locationAddress: e.target.value })}
             required
-            styles={{
-              label: { color: "#e5e7eb", marginBottom: "0.5rem" },
-              input: {
-                backgroundColor: "#2d2d2d",
-                borderColor: "#404040",
-                color: "white",
-              },
-            }}
+            styles={{ label: labelStyle, input: inputStyle }}
           />
 
-          <TextInput
-            label="Evento"
-            placeholder="Ingrese el nombre del evento"
-            value={formData.event}
-            onChange={(e) =>
-              setFormData({ ...formData, event: e.target.value })
-            }
-            required
-            styles={{
-              label: { color: "#e5e7eb", marginBottom: "0.5rem" },
-              input: {
-                backgroundColor: "#2d2d2d",
-                borderColor: "#404040",
-                color: "white",
-              },
-            }}
-          />
-
-          <Grid gutter="md">
+          <Grid>
             <Grid.Col span={4}>
               <NumberInput
-                label="Trabajadores"
-                placeholder="15"
-                value={
-                  formData.workers ? parseInt(formData.workers) : undefined
-                }
-                onChange={(value) =>
-                  setFormData({ ...formData, workers: value?.toString() || "" })
-                }
+                label="Monto Total"
+                placeholder="0.00"
+                value={formData.amount}
+                onChange={(val) => setFormData({ ...formData, amount: val.toString() })}
                 required
-                min={1}
-                hideControls
-                decimalScale={0}
-                styles={{
-                  label: { color: "#e5e7eb", marginBottom: "0.5rem" },
-                  input: {
-                    backgroundColor: "#2d2d2d",
-                    borderColor: "#404040",
-                    color: "white",
-                  },
-                }}
+                min={0}
+                prefix="$ "
+                styles={{ label: labelStyle, input: inputStyle }}
               />
             </Grid.Col>
-          
             <Grid.Col span={4}>
+              <NumberInput
+                label="Personal Propio"
+                placeholder="0"
+                value={formData.workers}
+                onChange={(val) => setFormData({ ...formData, workers: val.toString() })}
+                min={0}
+                styles={{ label: labelStyle, input: inputStyle }}
+              />
+            </Grid.Col>
+            <Grid.Col span={4}>
+              <Select
+                label="Colaborador Externo"
+                placeholder="Opcional"
+                data={collaboratorSelector.map((c) => ({ value: c.id, label: c.displayName }))}
+                value={formData.collaboratorId}
+                onChange={(value) => setFormData({ ...formData, collaboratorId: value || "", collabWorkersCount: "" })}
+                clearable
+                searchable
+                styles={{ label: labelStyle, input: inputStyle }}
+              />
+            </Grid.Col>
+          </Grid>
+
+          {/* Campo condicional para personal externo si se selecciona un colaborador */}
+          {formData.collaboratorId && (
+            <Box 
+              p="sm" 
+              style={{ 
+                backgroundColor: "rgba(249, 115, 22, 0.05)", 
+                borderRadius: "8px", 
+                border: "1px dashed #f97316" 
+              }}
+            >
+              <Grid align="center">
+                <Grid.Col span={8}>
+                  <Text size="sm" fw={600} c="orange">Personal Externo Requerido</Text>
+                  <Text size="xs" c="#9ca3af">Especifique cuántos empleados de este colaborador asistirán al proyecto.</Text>
+                </Grid.Col>
+                <Grid.Col span={4}>
+                  <NumberInput
+                    placeholder="Cantidad"
+                    value={formData.collabWorkersCount}
+                    onChange={(val) => setFormData({ ...formData, collabWorkersCount: val.toString() })}
+                    min={1}
+                    required
+                    styles={{ input: inputStyle }}
+                  />
+                </Grid.Col>
+              </Grid>
+            </Box>
+          )}
+
+          <Grid>
+            <Grid.Col span={6}>
               <TextInput
                 label="Fecha Inicio"
                 type="date"
@@ -302,18 +264,15 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
                 }
                 required
                 styles={{
-                  label: { color: "#e5e7eb", marginBottom: "0.5rem" },
+                  label: labelStyle,
                   input: {
-                    backgroundColor: "#2d2d2d",
-                    borderColor: "#404040",
-                    color: "white",
+                    ...inputStyle,
                     colorScheme: "dark"
                   },
                 }}
               />
             </Grid.Col>
-
-            <Grid.Col span={4}>
+            <Grid.Col span={6}>
               <TextInput
                 label="Fecha Fin"
                 type="date"
@@ -323,11 +282,9 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
                 }
                 required
                 styles={{
-                  label: { color: "#e5e7eb", marginBottom: "0.5rem" },
+                  label: labelStyle,
                   input: {
-                    backgroundColor: "#2d2d2d",
-                    borderColor: "#404040",
-                    color: "white",
+                    ...inputStyle,
                     colorScheme: "dark"
                   },
                 }}

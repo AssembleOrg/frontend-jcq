@@ -11,6 +11,7 @@ import {
   CheckCircle,
   FileText,
   Package, 
+  DollarSign, 
 } from "lucide-react";
 import type { Project } from "@/src/core/entities";
 import { useProjectsStore } from "@/src/presentation/stores";
@@ -155,6 +156,42 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
               {statusLabels[project.status]}
             </Badge>
           </Group>
+
+          {/* Seccion de Colaborador Asignado (Datos historicos para poder llevar un registro*/}
+          {project.collaboratorId && (
+            <Box 
+              p="xs" 
+              style={{ 
+                backgroundColor: "rgba(249, 115, 22, 0.05)", 
+                borderRadius: "8px", 
+                border: "1px solid rgba(249, 115, 22, 0.2)",
+                borderLeft: "4px solid #f97316" 
+              }}
+            >
+              <Group gap="xs" mb={4}>
+                <UsersIcon size={14} color="#f97316" />
+                <Text size="xs" fw={700} c="orange" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                  Colaborador Asignado
+                </Text>
+              </Group>
+
+              <Text size="sm" fw={600} c="white">
+                {project.collabDisplayName}
+              </Text>
+
+              <Group gap="xl" mt={4}>
+                <Text size="xs" c="#9ca3af">
+                  Personal: <Text span c="white">{project.collabWorkersCount}</Text>
+                </Text>
+                <Group gap={4}>
+                   <DollarSign size={12} color="#10b981" />
+                   <Text size="xs" c="#9ca3af">
+                    Acordado: <Text span c="#10b981" fw={600}>{formatARS(project.collabValuePerHour || 0)}/hr</Text>
+                  </Text>
+                </Group>
+              </Group>
+            </Box>
+          )}
 
           {/* Amounts */}
           <Stack gap="xs">

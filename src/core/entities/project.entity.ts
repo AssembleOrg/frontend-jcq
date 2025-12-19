@@ -1,5 +1,6 @@
 import type { Client } from "./client.entity";
 import type { Structure } from "./structure-entity";
+import type { Collaborator } from "./collaborators-entity";
 
 export type ProjectStatus =
   | "BUDGET"
@@ -32,6 +33,11 @@ export interface Project {
   workers: number;
   structures?: ProjectStructure[];
   event: string;
+  collaboratorId?: string; 
+  collaborator?: Collaborator;
+  collabWorkersCount?: number; 
+  collabValuePerHour?: number; 
+  collabDisplayName?: string; // El display que tenia en ese entoncess
   dateInit: string;
   dateEnd: string;
   createdAt: string;

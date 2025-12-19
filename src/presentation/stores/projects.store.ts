@@ -30,6 +30,7 @@ interface ProjectsState {
   deleteProject: (id: string) => Promise<void>;
   setSelectedProject: (project: Project | null) => void;
   clearError: () => void;
+  assignCollaborator: (projectId: string, collaboratorId: string) => Promise<Project>;
 }
 
 export const useProjectsStore = create<ProjectsState>((set, get) => ({
@@ -200,6 +201,25 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
         isLoading: false,
         error: errorMessage,
       });
+      showToast.error(errorMessage);
+      throw error;
+    }
+  },
+
+  assignCollaborator: async (projectId: string, collaboratorId: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const updatedProject = await projectsApi.assignCollaborator(projectId, collaboratorId);
+      set((state) => ({
+        projects: state.projects.map((p) => (p.id === projectId ? updatedProject : p)),
+        selectedProject: state.selectedProject?.id === projectId ? updatedProject : state.selectedProject,
+        isLoading: false,
+      }));
+      showToast.success("Colaborador asignado y valores congelados correctamente");
+      return updatedProject;
+    } catch (error: unknown) {
+      const errorMessage = formatErrorMessage(error) || "Error al asignar colaborador";
+      set({ isLoading: false, error: errorMessage });
       showToast.error(errorMessage);
       throw error;
     }
