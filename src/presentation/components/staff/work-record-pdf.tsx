@@ -1,5 +1,5 @@
 import React from 'react';
-import { Page, Text, View, Document, StyleSheet } from '@react-pdf/renderer';
+import { Page, Text, View, Document, StyleSheet, Image } from '@react-pdf/renderer';
 
 // Paleta de colores JCQ
 const COLORS = {
@@ -51,7 +51,7 @@ const styles = StyleSheet.create({
     paddingBottom: 10
   },
   companyName: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.primary,
     textTransform: 'uppercase'
@@ -164,6 +164,8 @@ export interface PdfData {
     miercoles: number;
     jueves: number;
     viernes: number;
+    sabado: number;
+    domingo: number;
   };
   totalHours: number;
   hourlyRate: number;
@@ -182,15 +184,27 @@ export const WorkRecordPdf = ({ data }: { data: PdfData }) => (
 
       {/* encabezado*/}
       <View style={styles.headerContainer}>
-        <View>
-            <Text style={styles.companyName}>JCQ ANDAMIOS</Text>
-            <Text style={{ fontSize: 9, color: COLORS.gray }}>Gestión de Personal</Text>
-        </View>
-        <View style={{ alignItems: 'flex-end' }}>
-            <Text style={styles.documentTitle}>LIQUIDACION SEMANAL</Text>
-            <Text style={{ fontSize: 10, marginTop: 4 }}>Fecha: {data.date}</Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+        <Image
+          src="/jcq.png"
+          style={{ width: 90, marginRight: 12 }}
+        />
+      <View>
+          <Text style={styles.companyName}>JCQ ANDAMIOS</Text>
+          <Text style={{ fontSize: 9, color: COLORS.gray }}>
+            Gestión de Personal
+          </Text>
         </View>
       </View>
+
+  <View style={{ alignItems: 'flex-end' }}>
+    <Text style={styles.documentTitle}>LIQUIDACION SEMANAL</Text>
+    <Text style={{ fontSize: 10, marginTop: 4 }}>
+      Fecha: {data.date}
+    </Text>
+  </View>
+</View>
+
 
       <View style={styles.section}>
         {/* Información */}
@@ -210,6 +224,8 @@ export const WorkRecordPdf = ({ data }: { data: PdfData }) => (
             <View style={styles.tableRow}><Text style={styles.colDay}>Miércoles</Text><Text style={styles.colHours}>{data.hoursDetail.miercoles}</Text></View>
             <View style={styles.tableRow}><Text style={styles.colDay}>Jueves</Text><Text style={styles.colHours}>{data.hoursDetail.jueves}</Text></View>
             <View style={styles.tableRow}><Text style={styles.colDay}>Viernes</Text><Text style={styles.colHours}>{data.hoursDetail.viernes}</Text></View>
+            <View style={styles.tableRow}><Text style={styles.colDay}>Sabado</Text><Text style={styles.colHours}>{data.hoursDetail.sabado}</Text></View>
+            <View style={styles.tableRow}><Text style={styles.colDay}>Domingo</Text><Text style={styles.colHours}>{data.hoursDetail.domingo}</Text></View>
         </View>
 
         {/* Sección de Totales y Monto */}
