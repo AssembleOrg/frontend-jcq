@@ -46,7 +46,9 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
     martes: "", 
     miercoles: "", 
     jueves: "", 
-    viernes: ""
+    viernes: "",
+    sabado: "",
+    domingo:"",
   });
 
   const [hourlyRate, setHourlyRate] = useState<number | string>("");
@@ -94,7 +96,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
 
   const handleResetForm = () => {
     setLastSavedRecord(null);
-    setHours({ lunes: "", martes: "", miercoles: "", jueves: "", viernes: "" });
+    setHours({ lunes: "", martes: "", miercoles: "", jueves: "", viernes: "", sabado: "", domingo: "" });
     setAdvance("");
   };
 
@@ -127,6 +129,8 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
         hoursWednesday: Number(hours.miercoles) || 0,
         hoursThursday: Number(hours.jueves) || 0,
         hoursFriday: Number(hours.viernes) || 0,
+        hoursSaturday: Number(hours.sabado) || 0,
+        hoursSunday: Number(hours.domingo) || 0,
         startDate: mondayDate.toISOString(), 
       };
 
@@ -141,7 +145,9 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
             martes: Number(hours.martes || 0),
             miercoles: Number(hours.miercoles || 0),
             jueves: Number(hours.jueves || 0),
-            viernes: Number(hours.viernes || 0)
+            viernes: Number(hours.viernes || 0),
+            sabado: Number(hours.sabado || 0),
+            domingo: Number(hours.domingo || 0)
         },
         totalHours: totalHours,
         hourlyRate: Number(hourlyRate),
@@ -170,7 +176,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
           </Text>
 
           <Paper p="sm" bg="#1a1a1a" withBorder style={{ borderColor: '#2d2d2d' }}>
-            <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Registro Diario (Lun - Vie)</Text>
+            <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Registro Diario (Lun - Dom)</Text>
             <SimpleGrid cols={5} spacing="xs" verticalSpacing="xs">
               {Object.keys(hours).map((day) => (
                 <NumberInput
@@ -335,7 +341,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                       <Table.Td>
                         <Stack gap={4}>
                            <Text size="sm" fw={500} c="white">
-                             {(record.hoursMonday + record.hoursTuesday + record.hoursWednesday + record.hoursThursday + record.hoursFriday) || record.hours || 0} hs totales
+                             {(record.hoursMonday + record.hoursTuesday + record.hoursWednesday + record.hoursThursday + record.hoursFriday + record.hoursSaturday + record.hoursSunday) || record.hours || 0} hs totales
                            </Text>
 
                            <Text size="xs" c="dimmed" style={{ fontSize: 11 }}>
@@ -380,6 +386,14 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                    <Text size="xs">Viernes:</Text>
                                    <Text size="xs" fw={700} c="orange">{record.hoursFriday || 0} hs</Text>
                                  </Group>
+                                 <Group justify="space-between">
+                                   <Text size="xs">Sabado:</Text>
+                                   <Text size="xs" fw={700} c="orange">{record.hoursSaturday || 0} hs</Text>
+                                 </Group>
+                                 <Group justify="space-between">
+                                   <Text size="xs">Domingo:</Text>
+                                   <Text size="xs" fw={700} c="orange">{record.hoursSunday || 0} hs</Text>
+                                 </Group>
                                </Stack>
                              </Popover.Dropdown>
                            </Popover>
@@ -408,8 +422,10 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                         miercoles: record.hoursWednesday || 0,
                                         jueves: record.hoursThursday || 0,
                                         viernes: record.hoursFriday || 0,
+                                        sabado: record.hoursSaturday || 0,
+                                        domingo: record.hoursSunday || 0,
                                     },
-                                    totalHours: (record.hoursMonday + record.hoursTuesday + record.hoursWednesday + record.hoursThursday + record.hoursFriday),
+                                    totalHours: (record.hoursMonday + record.hoursTuesday + record.hoursWednesday + record.hoursThursday + record.hoursFriday + record.hoursSaturday + record.hoursSunday),
                                     hourlyRate: record.valuePerHour,
                                     advance: record.advance,
                                     totalPay: record.total
