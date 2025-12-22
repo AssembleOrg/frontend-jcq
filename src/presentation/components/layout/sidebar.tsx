@@ -14,6 +14,7 @@ import {
   X,
   Newspaper,
   DollarSign,
+  Wallet,
   IdCard,
 } from "lucide-react";
 import { useAuthStore } from "@/src/presentation/stores";
@@ -82,6 +83,12 @@ const navigation = [
     name: "Pagos",
     href: "/dashboard/paids",
     icon: DollarSign,
+    roles: ["ADMIN", "SUBADMIN", "MANAGER"],
+  },
+  {
+    name: "Caja",
+    href: "/dashboard/cashControl",
+    icon: Wallet,
     roles: ["ADMIN", "SUBADMIN", "MANAGER"],
   },
 ];
