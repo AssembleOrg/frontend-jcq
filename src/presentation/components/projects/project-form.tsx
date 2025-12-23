@@ -74,12 +74,17 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
       });
 
       if (project.structures) {
+        const isStockReserved = project.status !== 'BUDGET';
+
         setSelectedStructures(
           project.structures.map((item) => ({
             structureId: item.structureId,
             quantity: item.quantity,
             name: item.structure.name,
-            maxStock: item.structure.stock,
+            // Aquí aplicamos el ajuste para que el selector te deje moverte hasta tu propio límite
+            maxStock: isStockReserved 
+              ? item.structure.stock + item.quantity 
+              : item.structure.stock,
           }))
         );
       }

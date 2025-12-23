@@ -115,12 +115,7 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
           styles={{
             input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" },
             dropdown: { backgroundColor: "#1a1a1a", borderColor: "#2d2d2d", color: "white" },
-            option: { 
-                '&[data-hovered]': { backgroundColor: "#2d2d2d" },
-                '&[data-selected]': { backgroundColor: "#f97316", color: "white" },
-                // Estilo visual para aquellas opciones que esten sin stock
-                '&[data-disabled]': { opacity: 0.5, cursor: "not-allowed", color: "#6b7280" }
-              }
+            // SOLUCIÓN A ERROR DE CONSOLA: Eliminados los selectores &[data-hovered] que causaban el crash.
           }}
         />
         <Button 
