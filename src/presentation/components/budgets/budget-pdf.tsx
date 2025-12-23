@@ -44,6 +44,7 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    alignItems: 'center', // Agregado para centrar verticalmente el logo y el título
     marginBottom: 30,
     borderBottomWidth: 2,
     borderBottomColor: COLORS.primary,
@@ -208,10 +209,17 @@ export const BudgetPdfDocument = ({ budget }: { budget: Budget }) => {
 
         {/* Cabecera */}
         <View style={styles.headerContainer}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.companyName}>JCQ ANDAMIOS</Text>
-            <Text style={styles.companySub}>Alquiler y Montaje de Estructuras</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Image
+              src="/jcq.png"
+              style={{ width: 90, marginRight: 12 }}
+            />
+            <View style={styles.logoContainer}>
+              <Text style={styles.companyName}>JCQ ANDAMIOS</Text>
+              <Text style={styles.companySub}>Alquiler y Montaje de Estructuras</Text>
+            </View>
           </View>
+
           <View style={styles.budgetInfo}>
             <Text style={styles.budgetTitle}>PRESUPUESTO</Text>
             <Text style={styles.budgetDate}>N° {budget.id.slice(0, 8).toUpperCase()}</Text>
