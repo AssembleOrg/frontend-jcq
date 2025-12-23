@@ -35,6 +35,7 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
   useEffect(() => {
     const loadData = async () => {
       try {
+        // Pedimos todas las estructuras para tener la info actualizada de stock/available
         const data = await structuresApi.getAll({ limit: 100 });
         setStructures(data);
       } catch (e) {
@@ -52,6 +53,7 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
     const structure = structures.find((s) => s.id === selectedId);
     if (!structure) return;
 
+    // Evitar duplicados si ya está en la lista
     const exists = value.find((item) => item.structureId === structure.id);
     if (exists) return; 
 
@@ -59,7 +61,8 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
       structureId: structure.id,
       name: structure.name,
       quantity: 1, 
-      maxStock: structure.stock, 
+      // CORRECCION/FIX : Usar 'available' como límite para nuevos ítems
+      maxStock: structure.available, 
     };
 
     onChange([...value, newItem]);
@@ -71,6 +74,7 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
       if (item.structureId === id) {
         const newQty = item.quantity + delta;
         if (newQty < 1) return item;
+        // Respetamos el maxStock que se asigno al crear el item (o al cargarlo)
         if (newQty > item.maxStock) return item; 
         return { ...item, quantity: newQty };
       }
@@ -87,8 +91,10 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
     .filter(s => !value.find(v => v.structureId === s.id))
     .map(s => ({
       value: s.id,
-      label: `${s.name} (Stock: ${s.stock})`,
-      disabled: s.stock <= 0
+      // CORRECCION/FIX VISUAL: Mostramos Disponible en vez de Stock total
+      label: `${s.name} (Disponible: ${s.available})`,
+      // Deshabilitamos si no hay un disponible real
+      disabled: s.available <= 0
     }));
 
   if (loading) return <Loader size="sm" color="orange" />;
@@ -97,7 +103,7 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
     <Stack gap="sm">
       <Text size="sm" fw={500} c="white">Asignar Estructuras (Opcional)</Text>
       
-      {/* selector y el boton agregar */}
+      {/* Selector y botón agregar */}
       <Group align="flex-end">
         <Select
           placeholder="Buscar estructura..."
@@ -109,10 +115,7 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
           styles={{
             input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" },
             dropdown: { backgroundColor: "#1a1a1a", borderColor: "#2d2d2d", color: "white" },
-            option: { 
-                '&[data-hovered]': { backgroundColor: "#2d2d2d" },
-                '&[data-selected]': { backgroundColor: "#f97316", color: "white" } 
-              }
+            // SOLUCIÓN A ERROR DE CONSOLA: Eliminados los selectores &[data-hovered] que causaban el crash.
           }}
         />
         <Button 
@@ -125,10 +128,11 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
         </Button>
       </Group>
 
-      {/* Lista de los items seleccionados*/}
+      {/* Lista de items seleccionados */}
       <Stack gap="xs" mt="xs">
         {value.map((item) => {
-          const remainingStock = item.maxStock - item.quantity;
+          // Calcular cuánto más se puede agregar
+          const remainingToAdd = item.maxStock - item.quantity;
           
           return (
             <Paper 
@@ -144,8 +148,8 @@ export function ProjectStructuresSelector({ value, onChange }: Props) {
                   <Package size={18} color="#9ca3af" />
                   <Stack gap={0}>
                       <Text size="sm" c="white" fw={500}>{item.name}</Text>
-                      <Text size="xs" c={remainingStock === 0 ? "red" : "dimmed"}>
-                          Disponible: {remainingStock}
+                      <Text size="xs" c={remainingToAdd === 0 ? "red" : "dimmed"}>
+                          Límite: {item.maxStock} (Quedan: {remainingToAdd})  
                       </Text>
                   </Stack>
                 </Group>
