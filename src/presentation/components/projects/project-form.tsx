@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import type {
   Project,
   CreateProjectDto,
   UpdateProjectDto,
 } from "@/src/core/entities";
-import { useProjectsStore, useClientsStore } from "@/src/presentation/stores";
+import { useProjectsStore, useClientsStore, useBudgetsStore } from "@/src/presentation/stores";
 import {
   Modal,
   Button,
@@ -19,6 +19,7 @@ import {
   Divider,
   Box,
   Text,
+  Paper,
 } from "@mantine/core";
 import { ProjectStructuresSelector, SelectedItem } from "./project-structure-selector";
 import { useCollaboratorsStore } from "@/src/presentation/stores/collaborators.store";
@@ -33,13 +34,19 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
   const { createProject, updateProject, isLoading } = useProjectsStore();
   const { clients, fetchAllClients } = useClientsStore();
   const { collaboratorSelector, fetchCollaboratorSelector } = useCollaboratorsStore();
+  
+  // Hook para presupuestos
+  const { budgetsList, fetchBudgets } = useBudgetsStore();
+  
+  const [selectedBudgetId, setSelectedBudgetId] = useState<string | null>(null);
 
   useEffect(() => {
     if (isOpen) {
       fetchAllClients();
       fetchCollaboratorSelector(); // Cargar la lista para el select
+      fetchBudgets(); // Cargar presupuestos disponibles
     }
-  }, [isOpen, fetchAllClients, fetchCollaboratorSelector]);
+  }, [isOpen, fetchAllClients, fetchCollaboratorSelector, fetchBudgets]);
 
   const [formData, setFormData] = useState({
     amount: "",
@@ -52,11 +59,12 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     dateInit: "",
     dateEnd: "",
     collaboratorId: "",
-    collabWorkersCount: "", // Nuevo campo para personal externo
+    collabWorkersCount: "", 
   });
 
   const [selectedStructures, setSelectedStructures] = useState<SelectedItem[]>([]);
 
+  // useEffect PRINCIPAL: Carga datos al EDITAR un proyecto existente
   useEffect(() => {
     if (project) {
       setFormData({
@@ -74,21 +82,28 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
       });
 
       if (project.structures) {
+        // Lógica de stock al editar: Sumamos la cantidad propia al stock disponible
         const isStockReserved = project.status !== 'BUDGET';
 
         setSelectedStructures(
-          project.structures.map((item) => ({
-            structureId: item.structureId,
-            quantity: item.quantity,
-            name: item.structure.name,
-            // Aquí aplicamos el ajuste para que el selector te deje moverte hasta tu propio límite
-            maxStock: isStockReserved 
-              ? item.structure.stock + item.quantity 
-              : item.structure.stock,
-          }))
+          project.structures.map((item) => {
+            const dbStock = item.structure.stock; 
+            const realLimit = isStockReserved 
+              ? dbStock + item.quantity 
+              : dbStock;
+
+            return {
+              structureId: item.structureId,
+              quantity: item.quantity,
+              name: item.structure.name,
+              maxStock: realLimit, 
+            };
+          })
         );
       }
+      setSelectedBudgetId(null);
     } else {
+      // Reset completo
       setFormData({
         amount: "",
         clientId: "",
@@ -103,9 +118,45 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         collabWorkersCount: "",
       });
       setSelectedStructures([]);
+      setSelectedBudgetId(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, isOpen]);
+
+  //Importación Simplificada (Solo Datos)
+  const handleBudgetSelect = (budgetId: string | null) => {
+    setSelectedBudgetId(budgetId);
+    if (!budgetId) return;
+
+    const budget = budgetsList?.find((b) => b.id === budgetId);
+    if (!budget) return;
+
+    // Solo se rellenan los datos administrativos
+    setFormData((prev) => ({
+      ...prev,
+      clientId: budget.clientId || prev.clientId,
+      amount: budget.totalAmount.toString(),
+      event: budget.manualClientName 
+        ? `Evento - ${budget.manualClientName}` 
+        : (budget.client?.fullname ? `Evento - ${budget.client.fullname}` : prev.event),
+    }));
+    
+  };
+
+  const budgetOptions = useMemo(() => {
+    const list = budgetsList || [];
+    return list.map((b) => {
+      const clientLabel = b.client ? b.client.fullname : (b.manualClientName || "Sin Cliente");
+      const dateObj = new Date(b.date);
+      const dateLabel = !isNaN(dateObj.getTime()) ? dateObj.toLocaleDateString() : 'Fecha';
+      const total = Number(b.totalAmount || 0).toFixed(2);
+      
+      return {
+        value: b.id,
+        label: `${dateLabel} - ${clientLabel} ($${total})`
+      };
+    });
+  }, [budgetsList]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -117,7 +168,6 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
       locationLat: formData.locationLat ? Number(formData.locationLat) : undefined,
       locationLng: formData.locationLng ? Number(formData.locationLng) : undefined,
       collaboratorId: formData.collaboratorId || undefined,
-      // Solo se envia la cantidad de personal externo si hay un colaborador seleccionado
       collabWorkersCount: formData.collaboratorId ? Number(formData.collabWorkersCount) : undefined,
       structures: selectedStructures.map(({ structureId, quantity }) => ({
         structureId,
@@ -158,6 +208,27 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
+          
+          {/* NUEVA SECCION: Autocompletar datos desde presupuesto */}
+          {!project && (
+            <Paper p="xs" style={{ backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px dashed #404040" }}>
+              <Text size="xs" c="dimmed" mb={5}>Autocompletar datos desde Presupuesto Existente</Text>
+              <Select
+                placeholder="Buscar presupuesto..."
+                data={budgetOptions}
+                value={selectedBudgetId}
+                onChange={handleBudgetSelect}
+                searchable
+                clearable
+                styles={{
+                  input: { ...inputStyle, borderColor: "#f97316" },
+                  dropdown: { backgroundColor: "#1a1a1a", borderColor: "#404040", color: "white" },
+                  option: { color: "white" }
+                }}
+              />
+            </Paper>
+          )}
+
           <Grid>
             <Grid.Col span={6}>
               <Select
@@ -229,7 +300,6 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
             </Grid.Col>
           </Grid>
 
-          {/* Campo condicional para personal externo si se selecciona un colaborador */}
           {formData.collaboratorId && (
             <Box 
               p="sm" 

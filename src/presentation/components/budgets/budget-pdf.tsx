@@ -54,7 +54,7 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
   },
   companyName: {
-    fontSize: 24,
+    fontSize: 18,
     fontWeight: 'bold',
     color: COLORS.primary,
     textTransform: 'uppercase',
