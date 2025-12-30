@@ -5,6 +5,10 @@ export interface Staff {
   dni?: string;
   cuit?: string;
   category?: string;
+  numberPhone?: string;
+  adress?: string;
+  email?: string;
+  seniority: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -15,6 +19,10 @@ export interface CreateStaffDto {
   dni?: string;
   cuit?: string;
   category?: string;
+  numberPhone?: string;
+  adress?: string;
+  email?: string;
+  seniority: string;
 }
 
 export interface UpdateStaffDto extends Partial<CreateStaffDto> {}
