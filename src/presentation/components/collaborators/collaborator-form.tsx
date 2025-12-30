@@ -16,6 +16,7 @@ import {
   Grid,
   Text,
   NumberInput,
+  Textarea,
 } from "@mantine/core"; 
 
 interface CollaboratorFormProps {
@@ -27,7 +28,7 @@ interface CollaboratorFormProps {
 export function CollaboratorForm({ isOpen, onClose, collaborator }: CollaboratorFormProps) {
   const { createCollaborator, updateCollaborator, isLoading } = useCollaboratorsStore(); 
 
-  const [formData, setFormData] = useState<CreateCollaboratorDto>({
+  const [formData, setFormData] = useState<CreateCollaboratorDto & { notes?: string }>({
     firstName: "",
     lastName: "",
     companyName: "",
@@ -35,6 +36,7 @@ export function CollaboratorForm({ isOpen, onClose, collaborator }: Collaborator
     dni: "",
     quantityWorkers: 0,
     valuePerHour: 0,
+    notes: "", 
   }); 
 
   useEffect(() => {
@@ -47,6 +49,7 @@ export function CollaboratorForm({ isOpen, onClose, collaborator }: Collaborator
         dni: collaborator.dni || "",
         quantityWorkers: collaborator.quantityWorkers,
         valuePerHour: collaborator.valuePerHour,
+        notes: collaborator.notes || "", 
       });
     } else {
       setFormData({
@@ -57,6 +60,7 @@ export function CollaboratorForm({ isOpen, onClose, collaborator }: Collaborator
         dni: "",
         quantityWorkers: 0,
         valuePerHour: 0,
+        notes: "", 
       });
     }
   }, [collaborator, isOpen]); 
@@ -180,6 +184,18 @@ export function CollaboratorForm({ isOpen, onClose, collaborator }: Collaborator
               />
             </Grid.Col>
           </Grid> 
+
+          {/* NUEVO CAMPO: NOTES */}
+          <Textarea
+            label="Notas / Observaciones"
+            placeholder="Información adicional..."
+            value={formData.notes}
+            onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+            autosize
+            minRows={2}
+            maxRows={4}
+            styles={inputStyles}
+          />
 
           <Group justify="flex-end" mt="xl">
             <Button variant="subtle" color="gray" onClick={onClose}>
