@@ -27,18 +27,9 @@ export interface StaffFilters {
   cuit?: string;
 }
 
-export interface WorkRecord {
-  id: string;
-  staffId: string;
-  date: string;
-  hours: number;
-  description?: string;
-}
-
 // Interfaz que espera el backend para POST
 export interface CreateWorkRecordDto {
   staffId: string;
-  valuePerHour: number;
   advance: number;
   hoursMonday: number;
   hoursTuesday: number;
@@ -47,6 +38,14 @@ export interface CreateWorkRecordDto {
   hoursFriday: number;
   hoursSaturday: number;
   hoursSunday: number;
+  hoursMondayExtra: number;
+  hoursTuesdayExtra: number;
+  hoursWednesdayExtra: number;
+  hoursThursdayExtra: number;
+  hoursFridayExtra: number;
+  hoursSaturdayExtra: number; 
+  hoursSundayExtra: number;
+  hoursLastWeek: number;
   startDate: string; 
 }
 

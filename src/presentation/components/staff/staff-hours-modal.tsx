@@ -23,7 +23,9 @@ import {
   IconEye, 
   IconDownload, 
   IconFileTypePdf, 
-  IconPlus 
+  IconPlus,
+  IconPencil,       // Icono para editar
+  IconDeviceFloppy  // Icono para guardar cambios
 } from "@tabler/icons-react"; 
 import { staffApi } from "@/src/infrastructure/api/staff.api";
 import type { Staff } from "@/src/core/entities";
@@ -40,6 +42,10 @@ interface StaffHoursModalProps {
 export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalProps) => {
   const [referenceDate] = useState<Date>(new Date());
   
+  // Estado para controlar la edición
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingDate, setEditingDate] = useState<string | null>(null);
+
   // Strings vacios para placeholders 
   const [hours, setHours] = useState<{ [key: string]: number | string }>({
     lunes: "", 
@@ -49,13 +55,20 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
     viernes: "",
     sabado: "",
     domingo:"",
+    lunesExtra:"",
+    martesExtra:"",
+    miercolesExtra:"",
+    juevesExtra:"",
+    viernesExtra:"",
+    sabadoExtra:"",
+    domingoExtra:"",
+    ultSemana:"",
   });
 
-  const [hourlyRate, setHourlyRate] = useState<number | string>("");
   const [advance, setAdvance] = useState<number | string>("");
   
   const [totalPay, setTotalPay] = useState(0);
-  const [totalHours, setTotalHours] = useState(0);
+  const [totalAmount, setTotalAmount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [lastSavedRecord, setLastSavedRecord] = useState<PdfData | null>(null);
 
@@ -81,23 +94,55 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
   }, [fetchHistory]);
 
   useEffect(() => {
-    const sumHours = Object.values(hours).reduce((acc: number, curr: number | string) => acc + Number(curr || 0), 0);
-    
-    const rate = Number(hourlyRate || 0);
+    const sumAmounts = Object.values(hours).reduce((acc: number, curr: number | string) => acc + Number(curr || 0), 0);
     const adv = Number(advance || 0);
     
-    setTotalHours(sumHours);
-    setTotalPay((sumHours * rate) - adv);
-  }, [hours, hourlyRate, advance]);
+    setTotalAmount(sumAmounts);
+    setTotalPay(sumAmounts - adv);
+  }, [hours, advance]);
 
   const handleHourChange = (day: string, value: number | string) => {
     setHours(prev => ({ ...prev, [day]: value }));
+    if(lastSavedRecord) setLastSavedRecord(null);
   };
 
   const handleResetForm = () => {
     setLastSavedRecord(null);
-    setHours({ lunes: "", martes: "", miercoles: "", jueves: "", viernes: "", sabado: "", domingo: "" });
+    setEditingId(null);
+    setEditingDate(null);
+    setHours({ 
+        lunes: "", martes: "", miercoles: "", jueves: "", viernes: "", sabado: "", domingo: "",
+        lunesExtra: "", martesExtra: "", miercolesExtra: "", juevesExtra: "", viernesExtra: "", sabadoExtra: "", domingoExtra: "",
+        ultSemana: ""
+    });
     setAdvance("");
+  };
+
+  // Función para cargar datos al editar
+  const handleEdit = (record: any) => {
+    setLastSavedRecord(null);
+    setEditingId(record.id);
+    setEditingDate(record.startDate || record.date);
+    
+    setHours({
+      lunes: record.hoursMonday || "",
+      martes: record.hoursTuesday || "",
+      miercoles: record.hoursWednesday || "",
+      jueves: record.hoursThursday || "",
+      viernes: record.hoursFriday || "",
+      sabado: record.hoursSaturday || "",
+      domingo: record.hoursSunday || "",
+      lunesExtra: record.hoursMondayExtra || "",
+      martesExtra: record.hoursTuesdayExtra || "",
+      miercolesExtra: record.hoursWednesdayExtra || "",
+      juevesExtra: record.hoursThursdayExtra || "",
+      viernesExtra: record.hoursFridayExtra || "",
+      sabadoExtra: record.hoursSaturdayExtra || "",
+      domingoExtra: record.hoursSundayExtra || "",
+      ultSemana: record.hoursLastWeek || ""
+    });
+    
+    setAdvance(record.advance || "");
   };
 
   const handleSmartClose = () => {
@@ -113,16 +158,23 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
     setIsSubmitting(true);
 
     try {
-      const currentDay = referenceDate.getDay(); 
-      const diffToMonday = referenceDate.getDate() - currentDay + (currentDay === 0 ? -6 : 1); 
-      const mondayDate = new Date(referenceDate);
-      mondayDate.setDate(diffToMonday);
-      mondayDate.setHours(0, 0, 0, 0);
+      let recordDateStr = "";
+      
+      // Si editamos mantenemos la fecha original, si es nuevo calculamos el Lunes de la semana actual
+      if (editingId && editingDate) {
+         recordDateStr = editingDate;
+      } else {
+         const currentDay = referenceDate.getDay(); 
+         const diffToMonday = referenceDate.getDate() - currentDay + (currentDay === 0 ? -6 : 1); 
+         const mondayDate = new Date(referenceDate);
+         mondayDate.setDate(diffToMonday);
+         mondayDate.setHours(0, 0, 0, 0);
+         recordDateStr = mondayDate.toISOString();
+      }
 
       // Enviar datos limpios al backend
       const payload: CreateWorkRecordDto = {
         staffId: staff.id,
-        valuePerHour: Number(hourlyRate) || 0,
         advance: Number(advance) || 0,
         hoursMonday: Number(hours.lunes) || 0,
         hoursTuesday: Number(hours.martes) || 0,
@@ -131,32 +183,46 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
         hoursFriday: Number(hours.viernes) || 0,
         hoursSaturday: Number(hours.sabado) || 0,
         hoursSunday: Number(hours.domingo) || 0,
-        startDate: mondayDate.toISOString(), 
+        hoursMondayExtra: Number(hours.lunesExtra) || 0,
+        hoursTuesdayExtra: Number(hours.martesExtra) || 0,
+        hoursWednesdayExtra: Number(hours.miercolesExtra) || 0,
+        hoursThursdayExtra: Number(hours.juevesExtra) || 0,
+        hoursFridayExtra: Number(hours.viernesExtra) || 0,
+        hoursSaturdayExtra: Number(hours.sabadoExtra) || 0,
+        hoursSundayExtra : Number(hours.domingoExtra) || 0,
+        hoursLastWeek : Number(hours.ultSemana) || 0,
+        startDate: recordDateStr, 
       };
 
-      await staffApi.createWorkRecord(payload);
+      if (editingId) {
+        await staffApi.updateWorkRecord(editingId, payload); 
+      } else {
+        await staffApi.createWorkRecord(payload);
+      }
+
       await fetchHistory(); 
       
       const savedPdfData: PdfData = {
         employeeName: `${staff.firstName} ${staff.lastName}`,
-        date: new Date().toLocaleDateString(),
-        hoursDetail: { 
-            lunes: Number(hours.lunes || 0),
-            martes: Number(hours.martes || 0),
-            miercoles: Number(hours.miercoles || 0),
-            jueves: Number(hours.jueves || 0),
-            viernes: Number(hours.viernes || 0),
-            sabado: Number(hours.sabado || 0),
-            domingo: Number(hours.domingo || 0)
+        date: new Date(recordDateStr).toLocaleDateString(),
+        amountsDetail: { 
+            lunes:     { normal: Number(hours.lunes || 0), extra: Number(hours.lunesExtra || 0) },
+            martes:    { normal: Number(hours.martes || 0), extra: Number(hours.martesExtra || 0) },
+            miercoles: { normal: Number(hours.miercoles || 0), extra: Number(hours.miercolesExtra || 0) },
+            jueves:    { normal: Number(hours.jueves || 0), extra: Number(hours.juevesExtra || 0) },
+            viernes:   { normal: Number(hours.viernes || 0), extra: Number(hours.viernesExtra || 0) },
+            sabado:    { normal: Number(hours.sabado || 0), extra: Number(hours.sabadoExtra || 0) },
+            domingo:   { normal: Number(hours.domingo || 0), extra: Number(hours.domingoExtra || 0) }
         },
-        totalHours: totalHours,
-        hourlyRate: Number(hourlyRate),
+        lastWeekPayment: Number(hours.ultSemana || 0),
+        grossTotal: totalAmount, // Este es el total bruto calculado en el useEffect
         advance: Number(advance),
         totalPay: totalPay
       };
       
       setLastSavedRecord(savedPdfData);
       setShouldRefreshParent(true); 
+      setEditingId(null); // Salimos del modo edición
 
     } catch (error: any) {
       console.error("Error guardando:", error);
@@ -167,67 +233,92 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
     }
   };
 
+  const renderMoneyInput = (key: string, label: string, color: string = "white") => (
+    <NumberInput
+      key={key}
+      label={label}
+      placeholder="0"
+      thousandSeparator="."
+      decimalSeparator=","
+      leftSection={<Text size="xs" c="dimmed">$</Text>}
+      min={0}
+      allowNegative={false}
+      value={hours[key]}
+      onChange={(val) => handleHourChange(key, val)}
+      disabled={!!lastSavedRecord}
+      styles={{
+        input: { 
+          backgroundColor: "#0f0f0f", 
+          borderColor: "#2d2d2d", 
+          color: color, 
+          textAlign: 'center', 
+          paddingLeft: 24,
+          opacity: lastSavedRecord ? 0.5 : 1
+        },
+        label: { color: "#9ca3af", fontSize: 10, textAlign: 'center', width: '100%' }
+      }}
+      hideControls
+    />
+  );
+
   return (
     <Grid gutter="xl">
       <Grid.Col span={{ base: 12, md: 6 }}>
         <Stack gap="md">
-          <Text size="sm" c="dimmed">
-            Empleado: <Text span fw={700} c="white">{staff?.firstName} {staff?.lastName}</Text>
-          </Text>
+          <Group justify="space-between">
+            <Text size="sm" c="dimmed">
+                Empleado: <Text span fw={700} c="white">{staff?.firstName} {staff?.lastName}</Text>
+            </Text>
+            {editingId && (
+                <Badge color="yellow" variant="filled">Modificando Registro</Badge>
+            )}
+          </Group>
 
-          <Paper p="sm" bg="#1a1a1a" withBorder style={{ borderColor: '#2d2d2d' }}>
-            <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Registro Diario (Lun - Dom)</Text>
-            <SimpleGrid cols={5} spacing="xs" verticalSpacing="xs">
-              {Object.keys(hours).map((day) => (
-                <NumberInput
-                  key={day}
-                  label={day.slice(0,3).toUpperCase()}
-                  placeholder="0"
-                  min={0}
-                  max={24}
-                  allowNegative={false}
-                  value={hours[day]}
-                  onChange={(val) => handleHourChange(day, val)}
-                  disabled={!!lastSavedRecord}
-                  styles={{
-                    input: { 
-                      backgroundColor: "#0f0f0f", 
-                      borderColor: "#2d2d2d", 
-                      color: "white", 
-                      textAlign: 'center', 
-                      padding: '0 2px',
-                      opacity: lastSavedRecord ? 0.5 : 1
-                    },
-                    label: { color: "#9ca3af", fontSize: 10, textAlign: 'center', width: '100%' }
-                  }}
-                  hideControls
-                />
-              ))}
+          <Paper p="sm" bg="#1a1a1a" withBorder style={{ borderColor: editingId ? '#fcc419' : '#2d2d2d' }}>
+            <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Jornada Normal</Text>
+            <SimpleGrid cols={4} spacing="xs" verticalSpacing="xs">
+              {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((day) => 
+                renderMoneyInput(day, day.slice(0,3).toUpperCase())
+              )}
+            </SimpleGrid>
+
+            <Divider 
+                my="md" 
+                color="#2d2d2d" 
+                label={<Text size="xs" c="dimmed">Horas Extras</Text>} 
+                labelPosition="center"
+            />
+
+            <SimpleGrid cols={4} spacing="xs" verticalSpacing="xs">
+              {['lunesExtra', 'martesExtra', 'miercolesExtra', 'juevesExtra', 'viernesExtra', 'sabadoExtra', 'domingoExtra'].map((day) => 
+                renderMoneyInput(day, day.replace('Extra','').slice(0,3).toUpperCase() + ' (EX)')
+              )}
             </SimpleGrid>
           </Paper>
 
-          <Group grow>
+          <Group grow align="flex-start">
             <NumberInput
-              label="Valor Hora ($)"
+              label="Pago Semana Anterior"
               thousandSeparator="."
               decimalSeparator=","
               leftSection={<Text size="xs" c="dimmed">$</Text>}
-              value={hourlyRate}
+              value={hours.ultSemana}
               placeholder="0"
-              onChange={(val) => { setHourlyRate(val); if(lastSavedRecord) setLastSavedRecord(null); }}
+              onChange={(val) => handleHourChange('ultSemana', val)}
               disabled={!!lastSavedRecord}
               styles={{ 
                 input: { 
                   backgroundColor: "#0f0f0f", 
                   borderColor: "#2d2d2d", 
-                  color: "white",
+                  color: "#ffd43b",
                   opacity: lastSavedRecord ? 0.5 : 1 
                 }, 
                 label: {color: 'white'} 
               }}
             />
+
             <NumberInput
-              label="Adelanto ($)"
+              label="Adelanto"
               thousandSeparator="."
               decimalSeparator=","
               leftSection={<Text size="xs" c="dimmed">$</Text>}
@@ -249,12 +340,11 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
 
           <Paper p="md" radius="md" style={{ backgroundColor: "#25262b", border: "1px solid #373a40" }}>
             <Group justify="space-between">
-              <Text c="dimmed" size="sm">Total Horas: <Text span c="white" fw={700}>{totalHours}hs</Text></Text>
-              <Text c="dimmed" size="sm">Adelanto: <Text span c="red">-${Number(advance || 0)}</Text></Text>
+              <Text c="dimmed" size="sm">Adelanto: <Text span c="red">-${Number(advance || 0).toLocaleString('es-AR')}</Text></Text>
             </Group>
             <Divider my={8} color="#373a40" />
             <Group justify="space-between" align="center">
-              <Text size="md" fw={700} c="orange">TOTAL ESTIMADO:</Text>
+              <Text size="md" fw={700} c="orange">TOTAL A PAGAR:</Text>
               <Text size="xl" fw={900} c="green">
                 $ {totalPay.toLocaleString('es-AR')}
               </Text>
@@ -264,11 +354,16 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
           <Group justify="flex-end" mt="auto">
             {!lastSavedRecord ? (
                 <>
-                  <Button variant="default" onClick={handleSmartClose} styles={{ root: { backgroundColor: "transparent", borderColor: "#2d2d2d", color: "white" } }}>
-                    Cancelar
+                  <Button variant="default" onClick={editingId ? handleResetForm : handleSmartClose} styles={{ root: { backgroundColor: "transparent", borderColor: "#2d2d2d", color: "white" } }}>
+                    {editingId ? "Cancelar Edición" : "Cancelar"}
                   </Button>
-                  <Button color="green" onClick={handleSave} loading={isSubmitting}>
-                    Confirmar Carga
+                  <Button 
+                    color={editingId ? "yellow" : "green"} 
+                    onClick={handleSave} 
+                    loading={isSubmitting}
+                    leftSection={editingId ? <IconDeviceFloppy size={18}/> : undefined}
+                  >
+                    {editingId ? "Guardar Cambios" : "Confirmar Carga"}
                   </Button>
                 </>
             ) : (
@@ -325,14 +420,27 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                 <Table.Thead>
                   <Table.Tr>
                     <Table.Th c="dimmed">Fecha</Table.Th>
-                    <Table.Th c="dimmed">Detalle</Table.Th>
+                    <Table.Th c="dimmed">Detalle Pago</Table.Th>
                     <Table.Th c="dimmed" style={{ textAlign: 'right' }}>Total</Table.Th>
-                    <Table.Th w={50}></Table.Th>
+                    <Table.Th w={80}></Table.Th>
                   </Table.Tr>
                 </Table.Thead>
                 <Table.Tbody>
-                  {Array.isArray(history) && history.map((record: any) => (
-                    <Table.Tr key={record.id}>
+                  {Array.isArray(history) && history.map((record: any) => {
+                     const grossTotal = (
+                        (record.hoursMonday || 0) + (record.hoursTuesday || 0) + (record.hoursWednesday || 0) + 
+                        (record.hoursThursday || 0) + (record.hoursFriday || 0) + (record.hoursSaturday || 0) + 
+                        (record.hoursSunday || 0) +
+                        (record.hoursMondayExtra || 0) + (record.hoursTuesdayExtra || 0) + (record.hoursWednesdayExtra || 0) +
+                        (record.hoursThursdayExtra || 0) + (record.hoursFridayExtra || 0) + (record.hoursSaturdayExtra || 0) +
+                        (record.hoursSundayExtra || 0) +
+                        (record.hoursLastWeek || 0)
+                      );
+
+                    const isEditingThis = editingId === record.id;
+
+                    return (
+                    <Table.Tr key={record.id} bg={isEditingThis ? "rgba(252, 196, 25, 0.1)" : undefined}>
                       <Table.Td>
                         <Text size="sm" c="white">{new Date(record.startDate || record.date).toLocaleDateString()}</Text>
                         <Text size="xs" c="dimmed">Semana</Text>
@@ -341,11 +449,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                       <Table.Td>
                         <Stack gap={4}>
                            <Text size="sm" fw={500} c="white">
-                             {(record.hoursMonday + record.hoursTuesday + record.hoursWednesday + record.hoursThursday + record.hoursFriday + record.hoursSaturday + record.hoursSunday) || record.hours || 0} hs totales
-                           </Text>
-
-                           <Text size="xs" c="dimmed" style={{ fontSize: 11 }}>
-                             Valor: <Text span c="orange" fw={700}>${record.valuePerHour?.toLocaleString('es-AR')}</Text> /hr
+                             Bruto: ${grossTotal.toLocaleString('es-AR')}
                            </Text>
                            
                            <Popover width={200} position="bottom" withArrow shadow="md">
@@ -360,40 +464,38 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                    label: { fontSize: 11 } 
                                  }}
                                >
-                                 Ver días
+                                 Ver detalle
                                </Button>
                              </Popover.Target>
                              <Popover.Dropdown style={{ backgroundColor: '#25262b', borderColor: '#373a40', color: 'white' }}>
-                               <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">Desglose Semanal</Text>
+                               <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">Pagos por día</Text>
                                <Stack gap={4}>
                                  <Group justify="space-between">
-                                   <Text size="xs">Lunes:</Text>
-                                   <Text size="xs" fw={700} c="orange">{record.hoursMonday || 0} hs</Text>
+                                   <Text size="xs">Lun:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursMonday + record.hoursMondayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
                                  <Group justify="space-between">
-                                   <Text size="xs">Martes:</Text>
-                                   <Text size="xs" fw={700} c="orange">{record.hoursTuesday || 0} hs</Text>
+                                   <Text size="xs">Mar:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursTuesday + record.hoursTuesdayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
                                  <Group justify="space-between">
-                                   <Text size="xs">Miércoles:</Text>
-                                   <Text size="xs" fw={700} c="orange">{record.hoursWednesday || 0} hs</Text>
+                                   <Text size="xs">Mié:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursWednesday + record.hoursWednesdayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
                                  <Group justify="space-between">
-                                   <Text size="xs">Jueves:</Text>
-                                   <Text size="xs" fw={700} c="orange">{record.hoursThursday || 0} hs</Text>
+                                   <Text size="xs">Jue:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursThursday + record.hoursThursdayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
                                  <Group justify="space-between">
-                                   <Text size="xs">Viernes:</Text>
-                                   <Text size="xs" fw={700} c="orange">{record.hoursFriday || 0} hs</Text>
+                                   <Text size="xs">Vie:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursFriday + record.hoursFridayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
-                                 <Group justify="space-between">
-                                   <Text size="xs">Sabado:</Text>
-                                   <Text size="xs" fw={700} c="orange">{record.hoursSaturday || 0} hs</Text>
-                                 </Group>
-                                 <Group justify="space-between">
-                                   <Text size="xs">Domingo:</Text>
-                                   <Text size="xs" fw={700} c="orange">{record.hoursSunday || 0} hs</Text>
-                                 </Group>
+                                 {record.hoursLastWeek > 0 && (
+                                     <Group justify="space-between">
+                                        <Text size="xs">Sem. Ant:</Text>
+                                        <Text size="xs" fw={700} c="yellow">${record.hoursLastWeek.toLocaleString('es-AR')}</Text>
+                                     </Group>
+                                 )}
                                </Stack>
                              </Popover.Dropdown>
                            </Popover>
@@ -411,45 +513,57 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                       </Table.Td>
 
                       <Table.Td>
-                        <PDFDownloadLink
-                             document={
-                                <WorkRecordPdf data={{
-                                    employeeName: `${staff?.firstName} ${staff?.lastName}`,
-                                    date: new Date(record.startDate || record.date).toLocaleDateString(),
-                                    hoursDetail: {
-                                        lunes: record.hoursMonday || 0,
-                                        martes: record.hoursTuesday || 0,
-                                        miercoles: record.hoursWednesday || 0,
-                                        jueves: record.hoursThursday || 0,
-                                        viernes: record.hoursFriday || 0,
-                                        sabado: record.hoursSaturday || 0,
-                                        domingo: record.hoursSunday || 0,
-                                    },
-                                    totalHours: (record.hoursMonday + record.hoursTuesday + record.hoursWednesday + record.hoursThursday + record.hoursFriday + record.hoursSaturday + record.hoursSunday),
-                                    hourlyRate: record.valuePerHour,
-                                    advance: record.advance,
-                                    totalPay: record.total
-                                }} />
-                             }
-                             fileName={`recibo_${record.id}.pdf`}
-                        >
-                            {({ loading }) => (
-                                <Tooltip label="Descargar PDF" withArrow position="left">
-                                    <ActionIcon 
-                                      variant="light" 
-                                      color="blue" 
-                                      loading={loading}
-                                      radius="md"
-                                      size="lg"
-                                    >
-                                        <IconFileTypePdf size={20} />
-                                    </ActionIcon>
-                                </Tooltip>
-                            )}
-                        </PDFDownloadLink>
+                        <Group gap={4} justify="flex-end" wrap="nowrap">
+                            <Tooltip label="Editar Carga" withArrow>
+                                <ActionIcon 
+                                    variant="subtle" 
+                                    color="yellow" 
+                                    onClick={() => handleEdit(record)}
+                                >
+                                    <IconPencil size={18} />
+                                </ActionIcon>
+                            </Tooltip>
+
+                            <PDFDownloadLink
+                                document={
+                                    <WorkRecordPdf data={{
+                                        employeeName: `${staff?.firstName} ${staff?.lastName}`,
+                                        date: new Date(record.startDate || record.date).toLocaleDateString(),
+                                        amountsDetail: {
+                                            lunes:     { normal: record.hoursMonday || 0, extra: record.hoursMondayExtra || 0 },
+                                            martes:    { normal: record.hoursTuesday || 0, extra: record.hoursTuesdayExtra || 0 },
+                                            miercoles: { normal: record.hoursWednesday || 0, extra: record.hoursWednesdayExtra || 0 },
+                                            jueves:    { normal: record.hoursThursday || 0, extra: record.hoursThursdayExtra || 0 },
+                                            viernes:   { normal: record.hoursFriday || 0, extra: record.hoursFridayExtra || 0 },
+                                            sabado:    { normal: record.hoursSaturday || 0, extra: record.hoursSaturdayExtra || 0 },
+                                            domingo:   { normal: record.hoursSunday || 0, extra: record.hoursSundayExtra || 0 },
+                                        },
+                                        lastWeekPayment: record.hoursLastWeek || 0,
+                                        grossTotal: grossTotal,
+                                        advance: record.advance,
+                                        totalPay: record.total
+                                    }} />
+                                }
+                                fileName={`recibo_${record.id}.pdf`}
+                            >
+                                {({ loading }) => (
+                                    <Tooltip label="Descargar PDF" withArrow position="left">
+                                        <ActionIcon 
+                                        variant="light" 
+                                        color="blue" 
+                                        loading={loading}
+                                        radius="md"
+                                        size="lg"
+                                        >
+                                            <IconFileTypePdf size={20} />
+                                        </ActionIcon>
+                                    </Tooltip>
+                                )}
+                            </PDFDownloadLink>
+                        </Group>
                       </Table.Td>
                     </Table.Tr>
-                  ))}
+                  )})}
                 </Table.Tbody>
               </Table>
             )}
