@@ -14,13 +14,16 @@ export interface StaffFormProps {
 export const StaffForm = ({ initialData, onClose, onSuccess }: StaffFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
   
-  // Estado del formulario (Sin email)
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
     dni: "",
     cuit: "",
     category: "",
+    numberPhone:"",
+    adress: "",
+    email: "",
+    seniority: "",
   });
 
   // Cargar datos si es edición
@@ -32,6 +35,10 @@ export const StaffForm = ({ initialData, onClose, onSuccess }: StaffFormProps) =
         dni: initialData.dni || "",
         cuit: initialData.cuit || "",
         category: initialData.category || "",
+        numberPhone: initialData.numberPhone || "",
+        adress: initialData.adress || "",
+        email : initialData.email || "",
+        seniority: initialData.seniority || "",
       });
     } else {
       // Limpiar si es creación
@@ -41,6 +48,10 @@ export const StaffForm = ({ initialData, onClose, onSuccess }: StaffFormProps) =
         dni: "",
         cuit: "",
         category: "",
+        numberPhone: "",
+        adress: "",
+        email: "",
+        seniority: "",
       });
     }
   }, [initialData]);
@@ -92,7 +103,23 @@ export const StaffForm = ({ initialData, onClose, onSuccess }: StaffFormProps) =
           />
         </Group>
 
-        {/* Campo de Email ELIMINADO aquí */}
+        {/* Nuevos campos de contacto */}
+        <Group grow>
+          <TextInput
+            label="Email"
+            placeholder="ejemplo@correo.com"
+            value={formData.email}
+            onChange={(e) => handleChange("email", e.target.value)}
+            styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
+          />
+          <TextInput
+            label="Teléfono"
+            placeholder="Ej: 11 1234 5678"
+            value={formData.numberPhone}
+            onChange={(e) => handleChange("numberPhone", e.target.value)}
+            styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
+          />
+        </Group>
 
         <Group grow>
           <TextInput
@@ -111,13 +138,31 @@ export const StaffForm = ({ initialData, onClose, onSuccess }: StaffFormProps) =
           />
         </Group>
 
+        <Group grow>
+          <TextInput
+            label="Categoría"
+            placeholder="Ej: A (Administrativo)"
+            value={formData.category}
+            onChange={(e) => handleChange("category", e.target.value)}
+            styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
+          />
+           <TextInput
+            label="Antigüedad"
+            placeholder="Ej: 2 años"
+            value={formData.seniority}
+            onChange={(e) => handleChange("seniority", e.target.value)}
+            styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
+          />
+        </Group>
+
+        {/* Dirección (ancho completo) */}
         <TextInput
-          label="Categoría"
-          placeholder="Ej: A (Administrativo)"
-          value={formData.category}
-          onChange={(e) => handleChange("category", e.target.value)}
-          styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
-        />
+            label="Dirección"
+            placeholder="Calle Falsa 123"
+            value={formData.adress}
+            onChange={(e) => handleChange("adress", e.target.value)}
+            styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
+          />
 
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onClose} styles={{ root: { backgroundColor: "transparent", borderColor: "#2d2d2d", color: "white" } }}>

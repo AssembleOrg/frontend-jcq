@@ -104,6 +104,7 @@ export default function StaffPage() {
     return `${first?.charAt(0) || ''}${last?.charAt(0) || ''}`.toUpperCase();
   };
 
+  //TODO : AGREGAR PAGINACION
   return (
     <Box>
       <Header
@@ -190,6 +191,10 @@ export default function StaffPage() {
                 <Table.Tr>
                   <Table.Th style={{ color: "#9ca3af" }}>Empleado</Table.Th>
                   <Table.Th style={{ color: "#9ca3af" }}>Categoría</Table.Th>
+                  <Table.Th style={{ color: "#9ca3af" }}>Email</Table.Th>
+                  <Table.Th style={{ color: "#9ca3af" }}>Teléfono</Table.Th>
+                  <Table.Th style={{ color: "#9ca3af" }}>Dirección</Table.Th>
+                  <Table.Th style={{ color: "#9ca3af" }}>Antigüedad</Table.Th>
                   <Table.Th style={{ color: "#9ca3af" }}>DNI</Table.Th>
                   <Table.Th style={{ color: "#9ca3af" }}>CUIT</Table.Th>
                   <Table.Th style={{ color: "#9ca3af", textAlign: "right" }}>Acciones</Table.Th>
@@ -211,6 +216,10 @@ export default function StaffPage() {
                     <Table.Td>
                       {staff.category ? <Badge color="orange" variant="light" size="sm">{staff.category}</Badge> : <Text size="sm" c="dimmed">-</Text>}
                     </Table.Td>
+                    <Table.Td><Text size="sm">{staff.email || "-"}</Text></Table.Td>
+                    <Table.Td><Text size="sm">{staff.numberPhone || "-"}</Text></Table.Td>
+                    <Table.Td><Text size="sm">{staff.adress || "-"}</Text></Table.Td>
+                    <Table.Td><Text size="sm">{staff.seniority || "-"}</Text></Table.Td>
                     <Table.Td><Text size="sm">{staff.dni || "-"}</Text></Table.Td>
                     <Table.Td><Text size="sm">{staff.cuit || "-"}</Text></Table.Td>
                     <Table.Td>

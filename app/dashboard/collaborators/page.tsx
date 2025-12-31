@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Filter, X, Edit, Trash2, Users, FileText, DollarSign } from "lucide-react";
+import { Plus, Filter, X, Edit, Trash2, Users, FileText, DollarSign, NotebookPen } from "lucide-react";
 import { Header } from "@/src/presentation/components/layout/header";
 import { useCollaboratorsStore } from "@/src/presentation/stores/collaborators.store";
 import {
@@ -237,8 +237,15 @@ export default function CollaboratorsPage() {
                             {formatCurrency(collab.valuePerHour)} / hora
                           </Text>
                         </Group>
+                        {collab.notes && (
+                          <Group gap="xs" align="flex-start">
+                            <NotebookPen size={14} color="#4c32e4ff" style={{ marginTop: 3 }} />
+                            <Text size="sm" c="#d1d5db" lineClamp={2} style={{ flex: 1 }}>
+                              {collab.notes}
+                            </Text>
+                          </Group>
+                        )}
                       </Stack>
-
                       <Group justify="flex-end" gap="xs">
                         <ActionIcon variant="light" color="blue" onClick={() => handleEdit(collab)}>
                           <Edit size={16} />

@@ -7,6 +7,7 @@ export interface Collaborator {
   dni?: string;
   quantityWorkers: number;
   valuePerHour: number;
+  notes?: string;
   createdAt: string;
   updatedAt: string;
   deletedAt?: string;
@@ -20,6 +21,7 @@ export interface CreateCollaboratorDto {
   dni?: string;
   quantityWorkers: number;
   valuePerHour: number;
+  notes?: string;
 }
 
 export interface UpdateCollaboratorDto extends Partial<CreateCollaboratorDto> {}
