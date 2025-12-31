@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react"; //
 import { Bell } from "lucide-react";
 import {
   Group,
@@ -9,7 +10,11 @@ import {
   Indicator,
   Box,
   Stack,
+  Badge,
+  Loader,
+  Tooltip,
 } from "@mantine/core";
+import { useDolarStore } from "@/src/presentation/stores/dolar.store"; 
 
 interface HeaderProps {
   title: string;
@@ -18,6 +23,13 @@ interface HeaderProps {
 }
 
 export function Header({ title, description, action }: HeaderProps) {
+  const { dolar, isLoading, fetchDolar, error } = useDolarStore();
+
+  // Pedir la cotización al montar el componente
+  useEffect(() => {
+    fetchDolar();
+  }, [fetchDolar]);
+
   return (
     <Box
       style={{
@@ -42,7 +54,25 @@ export function Header({ title, description, action }: HeaderProps) {
         </Stack>
 
         <Group gap="md">
+          {/* Inicio de la implementacion del valor del Dolar */}
+          {/* Mostrar solo el valor si no hay error */}
+          {!error && (
+            <Tooltip label={`Actualizado: ${dolar ? new Date(dolar.fechaActualizacion).toLocaleTimeString() : ''}`} color="dark">
+                <Badge 
+                  variant="light" 
+                  color="green" 
+                  size="lg" 
+                  radius="sm"
+                  leftSection={isLoading ? <Loader color="green" size={12} /> : "💵"}
+                  styles={{ root: { textTransform: 'none', cursor: 'default' } }}
+                >
+                  {dolar ? `Dólar : $${dolar.venta}` : 'Cargando...'}
+                </Badge>
+            </Tooltip>
+          )}
+
           {action}
+          
           <Indicator color="#ff6b35" size={8} offset={4}>
             <ActionIcon
               variant="subtle"
@@ -52,10 +82,7 @@ export function Header({ title, description, action }: HeaderProps) {
               styles={{
                 root: {
                   color: "#9ca3af",
-                  "&:hover": {
-                    backgroundColor: "#2d2d2d",
-                    color: "white",
-                  },
+                  "&:hover": { backgroundColor: "#2d2d2d", color: "white" },
                 },
               }}
             >
