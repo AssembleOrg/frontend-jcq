@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation"; // Necesaria para leer la URL
 import {
   Plus,
   Filter,
@@ -40,6 +41,9 @@ const STATUS_OPTIONS = [
 
 export default function ProjectsPage() {
   const { projects, meta, isLoading, fetchProjects } = useProjectsStore();
+  const searchParams = useSearchParams(); // Hook para leer parametros
+  const highlightId = searchParams.get('highlight'); // ID del proyecto a resaltar
+
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
@@ -382,14 +386,32 @@ export default function ProjectsPage() {
         ) : (
           <>
             <Grid gutter="lg">
-              {projects.map((project) => (
-                <Grid.Col key={project.id} span={{ base: 12, sm: 6, lg: 4 }}>
-                  <ProjectCard
-                    project={project}
-                    onViewPayments={handleViewPayments}
-                  />
-                </Grid.Col>
-              ))}
+              {projects.map((project) => {
+                // Lógica de resaltado
+                const isHighlighted = project.id === highlightId;
+                
+                return (
+                  <Grid.Col 
+                    key={project.id} 
+                    span={{ base: 12, sm: 6, lg: 4 }}
+                    style={isHighlighted ? {
+                      transform: 'scale(1.02)',
+                      border: '2px solid #ff6b35', // Borde naranja brillante
+                      borderRadius: '16px', 
+                      boxShadow: '0 0 25px rgba(255, 107, 53, 0.3)', // Efecto de resplandor
+                      zIndex: 2,
+                      transition: 'all 0.3s ease'
+                    } : {
+                      transition: 'all 0.3s ease'
+                    }}
+                  >
+                    <ProjectCard
+                      project={project}
+                      onViewPayments={handleViewPayments}
+                    />
+                  </Grid.Col>
+                );
+              })}
             </Grid>
 
             {/* Pagination Controls - ALWAYS VISIBLE */}
