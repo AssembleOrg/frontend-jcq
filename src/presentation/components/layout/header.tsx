@@ -151,9 +151,9 @@ export function Header({ title, description, action }: HeaderProps) {
                     <Menu.Item
                       key={project.id}
                       onClick={() => {
-                        // Redirigir a proyectoss
-                        router.push('/dashboard/projects');
-                      }}
+                          // Ahora se envia el ID como parámetro en la URL
+                          router.push(`/dashboard/projects?highlight=${project.id}`);
+                        }}
                       style={{ padding: '12px', borderBottom: '1px solid #2d2d2d' }}
                     >
                       <Group wrap="nowrap" align="flex-start">
