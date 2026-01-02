@@ -20,7 +20,7 @@ import {
   Alert,
   LoadingOverlay
 } from "@mantine/core";
-import { Plus, Trash, FileText, X, Download, CheckCircle } from "lucide-react";
+import { Plus, Trash, FileText, X, Download, CheckCircle, AlertCircle } from "lucide-react";
 import { CreateBudgetDto, CreateBudgetItemDto, Budget } from "@/src/core/entities";
 import { pdf } from "@react-pdf/renderer";
 import { BudgetPdfDocument } from "./budget-pdf";
@@ -196,6 +196,11 @@ export const BudgetForm = () => {
   const structureOptions = structuresList?.map(s => ({ value: s.id, label: s.name })) || [];
   const isFormDisabled = !!lastSavedBudget;
 
+  // Lógica de validación de Stock
+  const selectedStructureRef = structuresList.find(s => s.id === newItem.structureId);
+  const currentAvailable = selectedStructureRef ? selectedStructureRef.available : 0; 
+  const isExceedingStock = selectedStructureRef && newItem.quantity > currentAvailable;
+
   if (!mounted) return null;
 
   return (
@@ -278,7 +283,7 @@ export const BudgetForm = () => {
         <Paper withBorder p="md" radius="md" bg="dark.7">
             <Text size="sm" fw={700} mb="sm">Agregar Items</Text>
 
-            <Grid align="flex-end" mb="sm">
+            <Grid align="flex-end" mb="xs">
                 <Grid.Col span={2}>
                     <NumberInput
                         label="Cant."
@@ -286,6 +291,7 @@ export const BudgetForm = () => {
                         value={newItem.quantity}
                         onChange={(val) => setNewItem({ ...newItem, quantity: Number(val) })}
                         disabled={isFormDisabled}
+                        error={isExceedingStock}
                     />
                 </Grid.Col>
 
@@ -322,7 +328,7 @@ export const BudgetForm = () => {
                     <Button
                         onClick={handleAddItem}
                         variant="filled"
-                        color="blue"
+                        color={isExceedingStock ? "orange" : "blue"}
                         fullWidth
                         p={0}
                         disabled={isFormDisabled}
@@ -331,6 +337,19 @@ export const BudgetForm = () => {
                     </Button>
                 </Grid.Col>
             </Grid>
+
+             {/* Alerta de Stock Insuficiente */}
+             {isExceedingStock && (
+                <Alert 
+                    variant="light" 
+                    color="orange" 
+                    title="Stock Insuficiente" 
+                    icon={<AlertCircle size={16} />} 
+                    mb="md"
+                >
+                    Actualmente solo dispones de <b>{currentAvailable} unidades</b> disponibles de esa estructura. Aun asi puedes agregarla al presupuesto.
+                </Alert>
+            )}
 
             <Stack gap="xs">
                 {formData.items?.length === 0 && (
