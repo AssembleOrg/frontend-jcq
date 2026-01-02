@@ -18,14 +18,15 @@ import {
   ActionIcon,
   Tooltip
 } from "@mantine/core";
+import { useMediaQuery } from "@mantine/hooks";
 import { 
   IconHistory, 
   IconEye, 
   IconDownload, 
   IconFileTypePdf, 
   IconPlus,
-  IconPencil,       // Icono para editar
-  IconDeviceFloppy  // Icono para guardar cambios
+  IconPencil,
+  IconDeviceFloppy 
 } from "@tabler/icons-react"; 
 import { staffApi } from "@/src/infrastructure/api/staff.api";
 import type { Staff } from "@/src/core/entities";
@@ -42,26 +43,16 @@ interface StaffHoursModalProps {
 export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalProps) => {
   const [referenceDate] = useState<Date>(new Date());
   
+  // Hook para detectar si es móvil (menos de 768px, que es el breakpoint 'md' de Mantine)
+  const isMobile = useMediaQuery('(max-width: 768px)'); 
+
   // Estado para controlar la edición
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingDate, setEditingDate] = useState<string | null>(null);
 
-  // Strings vacios para placeholders 
   const [hours, setHours] = useState<{ [key: string]: number | string }>({
-    lunes: "", 
-    martes: "", 
-    miercoles: "", 
-    jueves: "", 
-    viernes: "",
-    sabado: "",
-    domingo:"",
-    lunesExtra:"",
-    martesExtra:"",
-    miercolesExtra:"",
-    juevesExtra:"",
-    viernesExtra:"",
-    sabadoExtra:"",
-    domingoExtra:"",
+    lunes: "", martes: "", miercoles: "", jueves: "", viernes: "", sabado: "", domingo:"",
+    lunesExtra:"", martesExtra:"", miercolesExtra:"", juevesExtra:"", viernesExtra:"", sabadoExtra:"", domingoExtra:"",
     ultSemana:"",
   });
 
@@ -118,7 +109,6 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
     setAdvance("");
   };
 
-  // Función para cargar datos al editar
   const handleEdit = (record: any) => {
     setLastSavedRecord(null);
     setEditingId(record.id);
@@ -159,8 +149,6 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
 
     try {
       let recordDateStr = "";
-      
-      // Si editamos mantenemos la fecha original, si es nuevo calculamos el Lunes de la semana actual
       if (editingId && editingDate) {
          recordDateStr = editingDate;
       } else {
@@ -172,7 +160,6 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
          recordDateStr = mondayDate.toISOString();
       }
 
-      // Enviar datos limpios al backend
       const payload: CreateWorkRecordDto = {
         staffId: staff.id,
         advance: Number(advance) || 0,
@@ -215,14 +202,14 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
             domingo:   { normal: Number(hours.domingo || 0), extra: Number(hours.domingoExtra || 0) }
         },
         lastWeekPayment: Number(hours.ultSemana || 0),
-        grossTotal: totalAmount, // Este es el total bruto calculado en el useEffect
+        grossTotal: totalAmount,
         advance: Number(advance),
         totalPay: totalPay
       };
       
       setLastSavedRecord(savedPdfData);
       setShouldRefreshParent(true); 
-      setEditingId(null); // Salimos del modo edición
+      setEditingId(null);
 
     } catch (error: any) {
       console.error("Error guardando:", error);
@@ -252,8 +239,9 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
           borderColor: "#2d2d2d", 
           color: color, 
           textAlign: 'center', 
-          paddingLeft: 24,
-          opacity: lastSavedRecord ? 0.5 : 1
+          paddingLeft: isMobile ? 18 : 24, 
+          opacity: lastSavedRecord ? 0.5 : 1,
+          fontSize: isMobile ? '12px' : '14px' 
         },
         label: { color: "#9ca3af", fontSize: 10, textAlign: 'center', width: '100%' }
       }}
@@ -274,9 +262,10 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
             )}
           </Group>
 
-          <Paper p="sm" bg="#1a1a1a" withBorder style={{ borderColor: editingId ? '#fcc419' : '#2d2d2d' }}>
+          <Paper p={isMobile ? "xs" : "sm"} bg="#1a1a1a" withBorder style={{ borderColor: editingId ? '#fcc419' : '#2d2d2d' }}>
             <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Jornada Normal</Text>
-            <SimpleGrid cols={4} spacing="xs" verticalSpacing="xs">
+            
+            <SimpleGrid cols={{ base: 2, xs: 3, sm: 4 }} spacing="xs" verticalSpacing="xs">
               {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((day) => 
                 renderMoneyInput(day, day.slice(0,3).toUpperCase())
               )}
@@ -289,7 +278,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                 labelPosition="center"
             />
 
-            <SimpleGrid cols={4} spacing="xs" verticalSpacing="xs">
+            <SimpleGrid cols={{ base: 2, xs: 3, sm: 4 }} spacing="xs" verticalSpacing="xs">
               {['lunesExtra', 'martesExtra', 'miercolesExtra', 'juevesExtra', 'viernesExtra', 'sabadoExtra', 'domingoExtra'].map((day) => 
                 renderMoneyInput(day, day.replace('Extra','').slice(0,3).toUpperCase() + ' (EX)')
               )}
@@ -398,7 +387,18 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
         </Stack>
       </Grid.Col>
 
-      <Grid.Col span={{ base: 12, md: 6 }} style={{ borderLeft: '1px solid #2d2d2d' }}>
+      <Grid.Col 
+        span={{ base: 12, md: 6 }} 
+        style={{ 
+          borderLeft: isMobile ? 'none' : '1px solid #2d2d2d', 
+          borderTop: isMobile ? '1px solid #2d2d2d' : 'none', 
+          
+          marginTop: isMobile ? '1rem' : 0, 
+          paddingTop: '1rem', 
+          
+          paddingLeft: isMobile ? 0 : '1.5rem' 
+        }}
+      >
         <Stack h="100%">
           <Group justify="space-between">
              <Group gap="xs">
@@ -410,7 +410,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
 
           <Divider color="#2d2d2d" />
 
-          <ScrollArea h={400} type="always" offsetScrollbars>
+          <ScrollArea h={isMobile ? 300 : 400} type="always" offsetScrollbars>
             {loadingHistory ? (
               <Center h={200}><Loader color="orange" type="bars" /></Center>
             ) : history.length === 0 ? (
@@ -490,6 +490,14 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                    <Text size="xs">Vie:</Text>
                                    <Text size="xs" fw={700} c="orange">${(record.hoursFriday + record.hoursFridayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
+                                 <Group justify="space-between">
+                                   <Text size="xs">Sáb:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursSaturday + record.hoursSaturdayExtra).toLocaleString('es-AR')}</Text>
+                                 </Group>
+                                 <Group justify="space-between">
+                                   <Text size="xs">Dom:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursSunday + record.hoursSundayExtra).toLocaleString('es-AR')}</Text>
+                                 </Group>
                                  {record.hoursLastWeek > 0 && (
                                      <Group justify="space-between">
                                         <Text size="xs">Sem. Ant:</Text>
@@ -544,7 +552,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                         totalPay: record.total
                                     }} />
                                 }
-                                fileName={`recibo_${record.id}.pdf`}
+                                fileName={`recibo_${staff?.lastName}${staff?.firstName}.pdf`}
                             >
                                 {({ loading }) => (
                                     <Tooltip label="Descargar PDF" withArrow position="left">
