@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react"; //importar suspense
 import { useSearchParams } from "next/navigation"; // Necesaria para leer la URL
 import {
   Plus,
@@ -39,7 +39,7 @@ const STATUS_OPTIONS = [
   { value: "FINISHED", label: "Finalizado" },
 ];
 
-export default function ProjectsPage() {
+function ProjectsContent() {
   const { projects, meta, isLoading, fetchProjects } = useProjectsStore();
   const searchParams = useSearchParams(); // Hook para leer parametros
   const highlightId = searchParams.get('highlight'); // ID del proyecto a resaltar
@@ -447,5 +447,20 @@ export default function ProjectsPage() {
         }}
       />
     </Box>
+  );
+}
+
+//Fix para deployment
+export default function ProjectsPage() {
+  return (
+    <Suspense 
+      fallback={
+        <Box style={{ display: 'flex', justifyContent: 'center', padding: '50px' }}>
+          <Loader color="orange" size="xl" />
+        </Box>
+      }
+    >
+      <ProjectsContent />
+    </Suspense>
   );
 }
