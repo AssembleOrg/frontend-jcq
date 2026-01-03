@@ -7,6 +7,9 @@ import type {
   UpdateExpenseDto,
 } from "@/src/core/entities";
 import { useCashControlStore } from "@/src/presentation/stores/cash-control.store";
+import { useStaffStore } from "@/src/presentation/stores/staff.store"; // Store de personal
+import { staffApi } from "@/src/infrastructure/api/staff.api"; // API directa para planillas
+
 import {
   Modal,
   Button,
@@ -15,6 +18,8 @@ import {
   Stack,
   NumberInput,
   Select,
+  Text,
+  Loader
 } from "@mantine/core";
 import { DateInput } from "@mantine/dates";
 import { format } from 'date-fns';
@@ -30,6 +35,7 @@ interface ExpenseFormData {
   amount: string | number;
   categoryId: string;
   date: Date | null;
+  workRecordId: string | null;
 }
 
 export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
@@ -41,18 +47,44 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
     isLoading 
   } = useCashControlStore();
 
+  const { staffList, fetchStaff } = useStaffStore();
+
+  const [selectedStaffId, setSelectedStaffId] = useState<string | null>(null);
+  const [workRecordsList, setWorkRecordsList] = useState<any[]>([]);
+  const [loadingRecords, setLoadingRecords] = useState(false);
+
   const [formData, setFormData] = useState<ExpenseFormData>({
     description: "",
     amount: "",
     categoryId: "",
     date: new Date(),
+    workRecordId: null,
   });
 
+  // Detectar categoría de sueldos
+  const isWagesCategory = !!categoriesList.find(c => c.id === formData.categoryId)
+    ?.name.toLowerCase().match(/horas|sueldo|pago de horas|personal/);
+
   useEffect(() => {
-    if (isOpen && categoriesList.length === 0) {
-      fetchCategories();
+    if (isOpen) {
+        if(categoriesList.length === 0) fetchCategories();
+        fetchStaff(); // Cargar empleados al abrir
     }
-  }, [isOpen, categoriesList.length, fetchCategories]);
+  }, [isOpen]);
+
+  // Efecto para cargar planillas cuando se elige empleado
+  useEffect(() => {
+    if (selectedStaffId && isWagesCategory) {
+        setLoadingRecords(true);
+        staffApi.getWorkRecords(selectedStaffId)
+           .then((data) => setWorkRecordsList(data))
+           .catch(console.error)
+           .finally(() => setLoadingRecords(false));
+    } else {
+        // Solo limpiamos si hay datos para evitar re-renders
+        setWorkRecordsList(prev => prev.length > 0 ? [] : prev);
+    }
+  }, [selectedStaffId, isWagesCategory]);
 
   useEffect(() => {
     if (expense) {
@@ -62,6 +94,8 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
         categoryId: expense.categoryId,
         // Convertir el string ISO a Date para evitar errores en el componente
         date: expense.date ? new Date(expense.date) : new Date(),
+        // @ts-ignore: Ignoramos si el tipo Expense aún no tiene workRecordId en el frontend
+        workRecordId: expense.workRecordId || null,
       });
     } else {
       setFormData({
@@ -69,9 +103,36 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
         amount: "",
         categoryId: "",
         date: new Date(),
+        workRecordId: null,
       });
+      setSelectedStaffId(null);
     }
   }, [expense, isOpen]);
+
+  // Autocompletar datos al seleccionar planilla
+  const handleWorkRecordSelect = (recordId: string) => {
+    const record = workRecordsList.find(r => r.id === recordId);
+    const staff = staffList.find(s => s.id === selectedStaffId); // Buscamos al empleado seleccionado
+
+    if (record) {
+        //info extra a agregar a descripcion
+        let staffInfo = "";
+        if (staff) {
+            // Prioridad DNI, si no tiene usa CUIT
+            const doc = staff.dni ? `DNI: ${staff.dni}` : (staff.cuit ? `CUIT: ${staff.cuit}` : "");
+            staffInfo = `- ${staff.firstName} ${staff.lastName} ${doc}`;
+        }
+
+        const dateRange = `Pago semana ${format(new Date(record.startDate), 'dd/MM')} al ${format(new Date(record.endDate), 'dd/MM')}`;
+        
+        setFormData(prev => ({
+            ...prev,
+            workRecordId: recordId,
+            amount: record.total,
+            description: `${dateRange} ${staffInfo}`.trim() // Concatenamos fechas con info del empleado
+        }));
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -87,12 +148,11 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
         finalAmount = Number(cleanString);
       }
 
-      //Conflicto en fechas, la solucion: calcularlo de forma mnual usando metodos UTC
+      // Conflicto en fechas: calcularlo de forma manual (CORREGIDO: Usando métodos locales para evitar desfase de día)
       const d = new Date(formData.date);
-
-      const year = d.getUTCFullYear();
-      const month = String(d.getUTCMonth() + 1).padStart(2, '0');
-      const day = String(d.getUTCDate()).padStart(2, '0');
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
 
       const isoDate = `${year}-${month}-${day}T12:00:00.000Z`;
 
@@ -101,9 +161,10 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
         amount: Number(finalAmount),
         categoryId: formData.categoryId,
         date: isoDate, 
+        workRecordId: (isWagesCategory && formData.workRecordId) ? formData.workRecordId : undefined
       };
 
-      console.log("Enviando fecha (UTC Getter):", data.date);
+      console.log("Enviando fecha (Manual Local):", data.date);
 
       if (expense) {
         await updateExpense(expense.id, data as UpdateExpenseDto);
@@ -143,6 +204,14 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
     }
   };
 
+  const staffContainerStyles = {
+    padding: '12px', 
+    border: '1px solid #404040', 
+    borderRadius: '8px', 
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    marginBottom: '10px'
+  };
+
   return (
     <Modal
       opened={isOpen}
@@ -157,6 +226,48 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
     >
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
+          <Select
+            label="Categoría"
+            placeholder="Seleccionar categoría"
+            data={categoriesList.map(c => ({ value: c.id, label: c.name }))}
+            value={formData.categoryId}
+            onChange={(val) => setFormData({ ...formData, categoryId: val || "" })}
+            required
+            searchable
+            styles={selectStyles} 
+          />
+
+          {isWagesCategory && !expense && (
+            <div style={staffContainerStyles}>
+                <Text size="sm" c="dimmed" mb={8} fw={500}>Detalles del Pago de Haberes</Text>
+                
+                <Select
+                    label="Empleado"
+                    placeholder="Buscar empleado..."
+                    data={staffList.map(s => ({ value: s.id, label: `${s.firstName} ${s.lastName}` }))}
+                    value={selectedStaffId}
+                    onChange={setSelectedStaffId}
+                    searchable
+                    styles={selectStyles}
+                    mb="sm"
+                />
+
+                <Select
+                    label="Planilla a Pagar (WorkRecord)"
+                    placeholder={!selectedStaffId ? "Seleccione empleado" : loadingRecords ? "Buscando..." : "Seleccionar periodo..."}
+                    disabled={!selectedStaffId || loadingRecords}
+                    data={workRecordsList.map(r => ({
+                        value: r.id,
+                        label: `${format(new Date(r.startDate), 'dd/MM')} al ${format(new Date(r.endDate), 'dd/MM')} - $${r.total}`
+                    }))}
+                    value={formData.workRecordId}
+                    onChange={(val) => val && handleWorkRecordSelect(val)}
+                    styles={selectStyles}
+                    rightSection={loadingRecords ? <Loader size={16} color="orange" /> : null}
+                />
+            </div>
+          )}
+
           <TextInput
             label="Descripción"
             placeholder="Ej: Combustible, Materiales..."
@@ -179,17 +290,6 @@ export function ExpenseForm({ isOpen, onClose, expense }: ExpenseFormProps) {
             prefix="$ "
             required
             styles={commonInputStyles}
-          />
-
-          <Select
-            label="Categoría"
-            placeholder="Seleccionar categoría"
-            data={categoriesList.map(c => ({ value: c.id, label: c.name }))}
-            value={formData.categoryId}
-            onChange={(val) => setFormData({ ...formData, categoryId: val || "" })}
-            required
-            searchable
-            styles={selectStyles} 
           />
 
           <DateInput

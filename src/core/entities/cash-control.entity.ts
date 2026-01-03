@@ -22,6 +22,7 @@ export interface CreateExpenseDto {
   amount: number;
   date: string | Date; // Permite Date object del form o ISO string
   categoryId: string;
+  workRecordId?: string;
 }
 
 export interface UpdateExpenseDto extends Partial<CreateExpenseDto> {}

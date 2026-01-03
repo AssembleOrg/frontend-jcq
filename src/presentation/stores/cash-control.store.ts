@@ -53,6 +53,17 @@ interface CashControlState {
   clearError: () => void;
 }
 
+const sortExpensesByDate = (expenses: Expense[]) => {
+  return [...expenses].sort((a, b) => {
+    const dateA = new Date(a.date).getTime();
+    const dateB = new Date(b.date).getTime();
+    if (dateB === dateA) {
+        return (new Date(b.createdAt || 0).getTime()) - (new Date(a.createdAt || 0).getTime());
+    }
+    return dateB - dateA; // Descendente
+  });
+};
+
 export const useCashControlStore = create<CashControlState>((set, get) => ({
   expensesList: [],
   selectedExpense: null,
@@ -108,11 +119,20 @@ export const useCashControlStore = create<CashControlState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const newExpense = await cashControlApi.createExpense(data);
-      set((state) => ({
-        expensesList: [...state.expensesList, newExpense],
-        totalExpenses: state.totalExpenses + Number(newExpense.amount),
-        isLoading: false,
-      }));
+      
+      set((state) => {
+        //Se agrega el gasto
+        const newList = [...state.expensesList, newExpense];
+        
+        //Reordenar inmediatamente para que aparezca arriba
+        const sortedList = sortExpensesByDate(newList);
+
+        return {
+            expensesList: sortedList,
+            totalExpenses: state.totalExpenses + Number(newExpense.amount),
+            isLoading: false,
+        };
+      });
       return newExpense;
     } catch (error: unknown) {
       set({
@@ -133,9 +153,14 @@ export const useCashControlStore = create<CashControlState>((set, get) => ({
         if (oldExpense) {
             newTotal = state.totalExpenses - Number(oldExpense.amount) + Number(updatedExpense.amount);
         }
+        // Actualizar el gasto en la lista
+        const updatedList = state.expensesList.map((e) => (e.id === id ? updatedExpense : e));
+      
+        // Reordenamos por si se cambio la fecha
+        const sortedList = sortExpensesByDate(updatedList);
 
         return {
-          expensesList: state.expensesList.map((e) => (e.id === id ? updatedExpense : e)),
+          expensesList: sortedList,
           selectedExpense: state.selectedExpense?.id === id ? updatedExpense : state.selectedExpense,
           totalExpenses: newTotal,
           isLoading: false,
