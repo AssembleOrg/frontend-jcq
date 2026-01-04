@@ -3,8 +3,6 @@
 import { useState, useEffect, useMemo } from "react";
 import type {
   Project,
-  CreateProjectDto,
-  UpdateProjectDto,
 } from "@/src/core/entities";
 import { useProjectsStore, useClientsStore, useBudgetsStore } from "@/src/presentation/stores";
 import {
@@ -24,10 +22,18 @@ import {
 import { ProjectStructuresSelector, SelectedItem } from "./project-structure-selector";
 import { useCollaboratorsStore } from "@/src/presentation/stores/collaborators.store";
 
+
 interface ProjectFormProps {
   isOpen: boolean;
   onClose: () => void;
   project?: Project;
+}
+
+// Interfaz local para manejar el estado del formulario de colaboradores
+interface CollaboratorRow {
+  collaboratorId: string;
+  workersCount: string | number;
+  hoursCount: string | number;
 }
 
 export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
@@ -43,11 +49,12 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
   useEffect(() => {
     if (isOpen) {
       fetchAllClients();
-      fetchCollaboratorSelector(); // Cargar la lista para el select
-      fetchBudgets(); // Cargar presupuestos disponibles
+      fetchCollaboratorSelector(); 
+      fetchBudgets(); 
     }
   }, [isOpen, fetchAllClients, fetchCollaboratorSelector, fetchBudgets]);
 
+  // Estado del formulario actualizado para soportar array de colaboradores
   const [formData, setFormData] = useState({
     amount: "",
     clientId: "",
@@ -58,8 +65,8 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     event: "",
     dateInit: "",
     dateEnd: "",
-    collaboratorId: "",
-    collabWorkersCount: "", 
+    // Array para múltiples colaboradores
+    collaborators: [] as CollaboratorRow[], 
   });
 
   const [selectedStructures, setSelectedStructures] = useState<SelectedItem[]>([]);
@@ -77,25 +84,30 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         event: project.event || "",
         dateInit: project.dateInit ? new Date(project.dateInit).toISOString().split('T')[0] : "",
         dateEnd: project.dateEnd ? new Date(project.dateEnd).toISOString().split('T')[0] : "",
-        collaboratorId: project.collaboratorId || "",
-        collabWorkersCount: project.collabWorkersCount?.toString() || "",
+        // Mapeamos los colaboradores existentes al formato del formulario
+        collaborators: project.collaborators 
+          ? project.collaborators.map(c => ({
+              collaboratorId: c.collaborator.id, 
+              workersCount: c.workersCount,
+              hoursCount: c.hoursCount
+            }))
+          : [],
       });
 
       if (project.structures) {
-        // Lógica de stock al editar: Sumamos la cantidad propia al stock disponible
         const isStockReserved = project.status !== 'BUDGET';
 
         setSelectedStructures(
           project.structures.map((item) => {
-            const dbStock = item.structure.stock; 
+            const dbStock = item.structure?.stock || 0; 
             const realLimit = isStockReserved 
               ? dbStock + item.quantity 
               : dbStock;
 
             return {
-              structureId: item.structureId,
+              structureId: item.structureId, 
               quantity: item.quantity,
-              name: item.structure.name,
+              name: item.structure?.name || "Ítem",
               maxStock: realLimit, 
             };
           })
@@ -114,8 +126,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         event: "",
         dateInit: "",
         dateEnd: "",
-        collaboratorId: "",
-        collabWorkersCount: "",
+        collaborators: [],
       });
       setSelectedStructures([]);
       setSelectedBudgetId(null);
@@ -123,7 +134,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project, isOpen]);
 
-  //Importación Simplificada (Solo Datos)
+  // Importación Simplificada (Solo Datos)
   const handleBudgetSelect = (budgetId: string | null) => {
     setSelectedBudgetId(budgetId);
     if (!budgetId) return;
@@ -131,7 +142,6 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     const budget = budgetsList?.find((b) => b.id === budgetId);
     if (!budget) return;
 
-    // Solo se rellenan los datos administrativos
     setFormData((prev) => ({
       ...prev,
       clientId: budget.clientId || prev.clientId,
@@ -140,7 +150,6 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         ? `Evento - ${budget.manualClientName}` 
         : (budget.client?.fullname ? `Evento - ${budget.client.fullname}` : prev.event),
     }));
-    
   };
 
   const budgetOptions = useMemo(() => {
@@ -158,6 +167,33 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     });
   }, [budgetsList]);
 
+  
+  const addCollaborator = () => {
+    setFormData((prev) => ({
+      ...prev,
+      collaborators: [
+        ...prev.collaborators,
+        { collaboratorId: "", workersCount: "", hoursCount: "" }
+      ]
+    }));
+  };
+
+  const removeCollaborator = (index: number) => {
+    setFormData((prev) => ({
+      ...prev,
+      collaborators: prev.collaborators.filter((_, i) => i !== index)
+    }));
+  };
+
+  const updateCollaborator = (index: number, field: keyof CollaboratorRow, value: any) => {
+    setFormData((prev) => {
+      const newCollaborators = [...prev.collaborators];
+      newCollaborators[index] = { ...newCollaborators[index], [field]: value };
+      return { ...prev, collaborators: newCollaborators };
+    });
+  };
+
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -167,8 +203,14 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
       workers: formData.workers ? Number(formData.workers) : 0,
       locationLat: formData.locationLat ? Number(formData.locationLat) : undefined,
       locationLng: formData.locationLng ? Number(formData.locationLng) : undefined,
-      collaboratorId: formData.collaboratorId || undefined,
-      collabWorkersCount: formData.collaboratorId ? Number(formData.collabWorkersCount) : undefined,
+      
+      // Transformamos el array de colaboradores a números
+      collaborators: formData.collaborators.map(c => ({
+        collaboratorId: c.collaboratorId,
+        workersCount: Number(c.workersCount),
+        hoursCount: Number(c.hoursCount)
+      })),
+
       structures: selectedStructures.map(({ structureId, quantity }) => ({
         structureId,
         quantity,
@@ -177,9 +219,9 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
 
     try {
       if (project) {
-        await updateProject(project.id, payload as UpdateProjectDto);
+        await updateProject(project.id, payload as any); 
       } else {
-        await createProject(payload as CreateProjectDto);
+        await createProject(payload as any);
       }
       onClose();
     } catch (error) {
@@ -209,7 +251,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
       <form onSubmit={handleSubmit}>
         <Stack gap="md">
           
-          {/* NUEVA SECCION: Autocompletar datos desde presupuesto */}
+          {/* Autocompletar desde presupuesto */}
           {!project && (
             <Paper p="xs" style={{ backgroundColor: "rgba(255, 255, 255, 0.03)", border: "1px dashed #404040" }}>
               <Text size="xs" c="dimmed" mb={5}>Autocompletar datos desde Presupuesto Existente</Text>
@@ -264,7 +306,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
           />
 
           <Grid>
-            <Grid.Col span={4}>
+            <Grid.Col span={6}>
               <NumberInput
                 label="Monto Total"
                 placeholder="0.00"
@@ -276,9 +318,9 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
                 styles={{ label: labelStyle, input: inputStyle }}
               />
             </Grid.Col>
-            <Grid.Col span={4}>
+            <Grid.Col span={6}>
               <NumberInput
-                label="Personal Propio"
+                label="Personal Propio (JCQ)"
                 placeholder="0"
                 value={formData.workers}
                 onChange={(val) => setFormData({ ...formData, workers: val.toString() })}
@@ -286,48 +328,112 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
                 styles={{ label: labelStyle, input: inputStyle }}
               />
             </Grid.Col>
-            <Grid.Col span={4}>
-              <Select
-                label="Colaborador Externo"
-                placeholder="Opcional"
-                data={collaboratorSelector.map((c) => ({ value: c.id, label: c.displayName }))}
-                value={formData.collaboratorId}
-                onChange={(value) => setFormData({ ...formData, collaboratorId: value || "", collabWorkersCount: "" })}
-                clearable
-                searchable
-                styles={{ label: labelStyle, input: inputStyle }}
-              />
-            </Grid.Col>
           </Grid>
 
-          {formData.collaboratorId && (
-            <Box 
-              p="sm" 
-              style={{ 
-                backgroundColor: "rgba(249, 115, 22, 0.05)", 
-                borderRadius: "8px", 
-                border: "1px dashed #f97316" 
-              }}
-            >
-              <Grid align="center">
-                <Grid.Col span={8}>
-                  <Text size="sm" fw={600} c="orange">Personal Externo Requerido</Text>
-                  <Text size="xs" c="#9ca3af">Especifique cuántos empleados de este colaborador asistirán al proyecto.</Text>
-                </Grid.Col>
-                <Grid.Col span={4}>
-                  <NumberInput
-                    placeholder="Cantidad"
-                    value={formData.collabWorkersCount}
-                    onChange={(val) => setFormData({ ...formData, collabWorkersCount: val.toString() })}
-                    min={1}
-                    required
-                    styles={{ input: inputStyle }}
-                  />
-                </Grid.Col>
-              </Grid>
-            </Box>
-          )}
+          <Divider my="xs" color="#2d2d2d" label="Colaboradores Externos" labelPosition="center" />
 
+          <Stack gap="sm">
+            {(() => {
+              // Identificar que colaboradores ya estan en el form
+              const allSelectedIds = formData.collaborators
+                .map((c) => c.collaboratorId)
+                .filter((id) => id !== "");
+
+              return formData.collaborators.map((item, index) => {
+                const rowOptions = collaboratorSelector
+                  .filter((c) => {
+                    const isSelectedElsewhere = allSelectedIds.includes(c.id);
+                    const isSelectedInThisRow = c.id === item.collaboratorId;
+                    // Mostramos si: (NO está seleccionado en otro lado) O (Es el de esta fila)
+                    return !isSelectedElsewhere || isSelectedInThisRow;
+                  })
+                  .map((c) => ({ value: c.id, label: c.displayName }));
+
+                return (
+                  <Box 
+                    key={index} 
+                    p="sm" 
+                    style={{ 
+                      backgroundColor: "rgba(255, 255, 255, 0.03)", 
+                      borderRadius: "8px", 
+                      border: "1px solid #404040" 
+                    }}
+                  >
+                    <Grid align="flex-end">
+                      <Grid.Col span={5}>
+                        <Select
+                          label="Colaborador"
+                          placeholder="Seleccionar"
+                          data={rowOptions}
+                          value={item.collaboratorId}
+                          onChange={(value) => updateCollaborator(index, "collaboratorId", value || "")}
+                          searchable
+                          nothingFoundMessage="Sin resultados"
+                          styles={{ label: { ...labelStyle, fontSize: '12px' }, input: inputStyle }}
+                        />
+                      </Grid.Col>
+                      <Grid.Col span={3}>
+                        <NumberInput
+                          label="Personal"
+                          placeholder="Cant."
+                          value={item.workersCount}
+                          onChange={(val) => updateCollaborator(index, "workersCount", val)}
+                          min={1}
+                          styles={{ label: { ...labelStyle, fontSize: '12px' }, input: inputStyle }}
+                        />
+                      </Grid.Col>
+                      <Grid.Col span={3}>
+                        <NumberInput
+                          label="Horas"
+                          placeholder="Cant."
+                          value={item.hoursCount}
+                          onChange={(val) => updateCollaborator(index, "hoursCount", val)}
+                          min={0}
+                          step={0.5}
+                          styles={{ label: { ...labelStyle, fontSize: '12px' }, input: inputStyle }}
+                        />
+                      </Grid.Col>
+                      <Grid.Col span={1}>
+                        <Button 
+                          color="red" 
+                          variant="subtle" 
+                          onClick={() => removeCollaborator(index)}
+                          style={{ padding: '0 5px' }}
+                          title="Eliminar colaborador"
+                        >
+                          X
+                        </Button>
+                      </Grid.Col>
+                    </Grid>
+                  </Box>
+                );
+              });
+            })()}
+
+            {(() => {
+              const isAddDisabled = formData.collaborators.length >= collaboratorSelector.length;
+
+              return (
+                <Button 
+                  variant="outline" 
+                  color="orange" 
+                  onClick={addCollaborator}
+                  disabled={isAddDisabled}
+                  fullWidth
+                  style={{ 
+                    borderColor: isAddDisabled ? "#404040" : "#f97316", 
+                    color: isAddDisabled ? "#6b7280" : "#f97316",
+                    opacity: isAddDisabled ? 0.5 : 1,
+                    cursor: isAddDisabled ? "not-allowed" : "pointer",
+                    transition: "all 0.2s ease"
+                  }}
+                >
+                  {isAddDisabled ? "No hay más colaboradores disponibles" : "+ Agregar Colaborador"}
+                </Button>
+              );
+            })()}
+          </Stack>
+          <Divider my="xs" color="#2d2d2d" />
           <Grid>
             <Grid.Col span={6}>
               <TextInput
@@ -369,7 +475,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
 
           <Divider my="xs" color="#2d2d2d" />
 
-          {/* Selector de estructuras que ya existen */}
+          {/* Selector de estructuras */}
           <ProjectStructuresSelector 
             value={selectedStructures}
             onChange={setSelectedStructures}
