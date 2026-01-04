@@ -14,14 +14,6 @@ export const projectsApi = {
     return data.data;
   },
 
-  async assignCollaborator(projectId: string, collaboratorId: string): Promise<Project> {
-    const { data } = await apiClient.patch<ApiResponse<Project>>(
-      `/projects/${projectId}/assign-collaborator`, 
-      { collaboratorId }
-    );
-    return data.data;
-  },
-
   async getPaginated(filters?: ProjectFilters): Promise<ApiResponse<Project[]>> {
     const { data } = await apiClient.get<ApiResponse<Project[]>>('/projects/pagination', {
       params: filters,

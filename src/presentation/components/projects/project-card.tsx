@@ -11,7 +11,9 @@ import {
   CheckCircle,
   FileText,
   Package, 
-  DollarSign, 
+  DollarSign,
+  ChevronDown,
+  ChevronUp, 
 } from "lucide-react";
 import type { Project } from "@/src/core/entities";
 import { useProjectsStore } from "@/src/presentation/stores";
@@ -25,7 +27,9 @@ import {
   Progress,
   ActionIcon,
   Box,
-  Popover, 
+  Popover,
+  Collapse,
+  ScrollArea, 
 } from "@mantine/core";
 import {
   formatDate,
@@ -68,6 +72,7 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showPaymentWarning, setShowPaymentWarning] = useState(false);
+  const [showCollaborators, setShowCollaborators] = useState(false);
 
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
@@ -158,38 +163,70 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
           </Group>
 
           {/* Seccion de Colaborador Asignado (Datos historicos para poder llevar un registro*/}
-          {project.collaboratorId && (
-            <Box 
-              p="xs" 
-              style={{ 
-                backgroundColor: "rgba(249, 115, 22, 0.05)", 
-                borderRadius: "8px", 
-                border: "1px solid rgba(249, 115, 22, 0.2)",
-                borderLeft: "4px solid #f97316" 
-              }}
-            >
-              <Group gap="xs" mb={4}>
-                <UsersIcon size={14} color="#f97316" />
-                <Text size="xs" fw={700} c="orange" style={{ textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                  Colaborador Asignado
-                </Text>
-              </Group>
-
-              <Text size="sm" fw={600} c="white">
-                {project.collabDisplayName}
-              </Text>
-
-              <Group gap="xl" mt={4}>
-                <Text size="xs" c="#9ca3af">
-                  Personal: <Text span c="white">{project.collabWorkersCount}</Text>
-                </Text>
-                <Group gap={4}>
-                   <DollarSign size={12} color="#10b981" />
-                   <Text size="xs" c="#9ca3af">
-                    Acordado: <Text span c="#10b981" fw={600}>{formatARS(project.collabValuePerHour || 0)}/hr</Text>
-                  </Text>
+          {project.collaborators && project.collaborators.length > 0 && (
+            <Box>
+              <Button 
+                variant="light" 
+                color="orange" 
+                fullWidth 
+                justify="space-between"
+                onClick={() => setShowCollaborators(!showCollaborators)}
+                rightSection={showCollaborators ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                styles={{
+                  root: { 
+                    backgroundColor: "rgba(249, 115, 22, 0.1)", 
+                    color: "#f97316",
+                    borderColor: "rgba(249, 115, 22, 0.2)",
+                    height: "36px"
+                  },
+                  label: { fontWeight: 600, fontSize: "13px" }
+                }}
+              >
+                <Group gap="xs">
+                  <UsersIcon size={16} />
+                  <span>{project.collaborators.length} Colaboradores Externos</span>
                 </Group>
-              </Group>
+              </Button>
+
+              {/* Contenido Desplegable */}
+              <Collapse in={showCollaborators}>
+                <ScrollArea.Autosize mah={250} type="auto" offsetScrollbars>
+                  <Stack gap="xs" mt="xs">
+                    {project.collaborators.map((item: any, index: number) => (
+                      <Box 
+                        key={item.id || index}
+                        p="xs" 
+                        style={{ 
+                          backgroundColor: "#1a1a1a", 
+                          borderRadius: "8px", 
+                          border: "1px solid #2d2d2d",
+                          borderLeft: "3px solid #f97316" 
+                        }}
+                      >
+                        <Group justify="space-between" align="flex-start" mb={4}>
+                           <Text size="sm" fw={600} c="white" style={{ flex: 1 }}>
+                            {item.collaborator?.companyName || `${item.collaborator?.firstName || ""} ${item.collaborator?.lastName || ""}`.trim() || "Colaborador"}
+                           </Text>
+                           <Text size="xs" fw={700} c="#10b981">
+                              {formatARS(item.collaborator?.valuePerHour || 0)}/hr
+                           </Text>
+                        </Group>
+
+                        <Group gap="lg">
+                          <Text size="xs" c="#9ca3af">
+                            Personal solicitado: <Text span c="white">{item.workersCount}</Text>
+                          </Text>
+                          {item.hoursCount > 0 && (
+                             <Text size="xs" c="#9ca3af">
+                               Horas estimadas: <Text span c="white">{item.hoursCount}</Text>
+                             </Text>
+                          )}
+                        </Group>
+                      </Box>
+                    ))}
+                  </Stack>
+                </ScrollArea.Autosize>
+              </Collapse>
             </Box>
           )}
 

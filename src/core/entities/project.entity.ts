@@ -18,6 +18,21 @@ export interface UsdPrice {
   fechaActualizacion: string;
 }
 
+export interface ProjectCollaborator {
+  id: string;
+  workersCount: number;
+  hoursCount: number;
+  valuePerHour: number;
+  totalCost: number;
+  collaborator: Collaborator;
+}
+
+export interface AssignCollaboratorDto {
+  collaboratorId: string;
+  workersCount: number;
+  hoursCount: number;
+}
+
 export interface Project {
   id: string;
   amount: number;
@@ -33,11 +48,7 @@ export interface Project {
   workers: number;
   structures?: ProjectStructure[];
   event: string;
-  collaboratorId?: string; 
-  collaborator?: Collaborator;
-  collabWorkersCount?: number; 
-  collabValuePerHour?: number; 
-  collabDisplayName?: string; // El display que tenia en ese entoncess
+  collaborators: ProjectCollaborator[];
   dateInit: string;
   dateEnd: string;
   createdAt: string;
@@ -62,6 +73,7 @@ export interface UpdateProjectDto {
   locationLat?: number;
   locationLng?: number;
   workers?: number;
+  collaborators?: AssignCollaboratorDto[];
   event?: string;
   dateInit?: string;
   dateEnd?: string;
