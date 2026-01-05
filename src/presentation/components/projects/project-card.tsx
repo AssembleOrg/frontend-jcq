@@ -218,7 +218,7 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
                           </Text>
                           {item.hoursCount > 0 && (
                              <Text size="xs" c="#9ca3af">
-                               Horas estimadas: <Text span c="white">{item.hoursCount}</Text>
+                               Horas estimadas por empleado: <Text span c="white">{item.hoursCount}</Text>
                              </Text>
                           )}
                         </Group>
