@@ -16,6 +16,7 @@ import {
   DollarSign,
   Wallet,
   IdCard,
+  ChartNoAxesCombinedIcon
 } from "lucide-react";
 import { useAuthStore } from "@/src/presentation/stores";
 import {
@@ -89,6 +90,12 @@ const navigation = [
     name: "Caja",
     href: "/dashboard/cashControl",
     icon: Wallet,
+    roles: ["ADMIN", "SUBADMIN", "MANAGER"],
+  },
+    {
+    name: "Analisis y estadisticas",
+    href: "/dashboard/statistics",
+    icon: ChartNoAxesCombinedIcon,
     roles: ["ADMIN", "SUBADMIN", "MANAGER"],
   },
 ];
