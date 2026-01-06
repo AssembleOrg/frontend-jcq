@@ -31,6 +31,7 @@ export interface StaffFilters {
   page?: number;
   limit?: number;
   firstName?: string;
+  lastName?: string;
   dni?: string;
   cuit?: string;
 }

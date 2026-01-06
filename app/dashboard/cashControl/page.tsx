@@ -2,9 +2,9 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { 
-  Container, Grid, Paper, Text, Group, Button, 
+  Grid, Paper, Text, Group, Button, 
   Tabs, Modal, Table, Badge, ActionIcon, Alert,
-  TextInput, Select, Pagination 
+  TextInput, Select, Pagination, Box 
 } from '@mantine/core';
 import { DatePickerInput } from '@mantine/dates';
 import { 
@@ -16,6 +16,7 @@ import { useCashControlStore } from '@/src/presentation/stores/cash-control.stor
 import { formatCurrency } from '@/src/presentation/utils/format-currency';
 import { ExpenseForm } from '@/src/presentation/components/cashControl/expense-form';
 import { CategoriesManager } from '@/src/presentation/components/cashControl/categories-manager';
+import { Header } from '@/src/presentation/components/layout/header';
 import { format, startOfDay, endOfDay, isWithinInterval } from 'date-fns'; 
 import { es } from 'date-fns/locale';
 import type { Expense } from '@/src/core/entities';
@@ -144,26 +145,26 @@ export default function CashControlPage() {
   };
 
   return (
-    <Container fluid p="lg">
-      
-      {/* HEADER */}
-      <Group justify="space-between" mb="lg">
-        <div>
-          <Text size="xl" fw={900} c="white">Caja y Gastos</Text>
-          <Text c="dimmed" size="sm">Control de flujo de caja del sistema</Text>
-        </div>
-        <Group>
-          <Button variant="default" leftSection={<IconSettings size={18} />} onClick={() => setCategoriesModalOpen(true)}>
-            Categorías
-          </Button>
-          <Button color="red" leftSection={<IconPlus size={18} />} onClick={handleCreate}>
-            Nuevo Gasto
-          </Button>
-        </Group>
-      </Group>
+    <Box>
+      <Header
+        title="Caja y Gastos"
+        description="Control de flujo de caja del sistema"
+        action={
+          <Group>
+            <Button variant="default" leftSection={<IconSettings size={18} />} onClick={() => setCategoriesModalOpen(true)}>
+              Categorías
+            </Button>
+            <Button color="red" leftSection={<IconPlus size={18} />} onClick={handleCreate}>
+              Nuevo Gasto
+            </Button>
+          </Group>
+        }
+      />
 
-      {/* DASHBOARD (Totales) */}
-      <Grid mb="xl">
+      <Box p="xl">
+        {/* DASHBOARD (Totales) */}
+        <Grid mb="xl">
+
         <Grid.Col span={{ base: 12, md: 4 }}>
           <Paper p="lg" radius="md" withBorder style={{ borderColor: 'rgba(34, 197, 94, 0.2)' }}>
             <Group justify="space-between" mb="xs">
@@ -368,7 +369,7 @@ export default function CashControlPage() {
       <Modal opened={categoriesModalOpen} onClose={() => setCategoriesModalOpen(false)} title="Gestionar Categorías">
         <CategoriesManager />
       </Modal>
-
-    </Container>
+      </Box>
+    </Box>
   );
 }

@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import { Plus, Filter, X } from "lucide-react";
 import { Header } from "@/src/presentation/components/layout/header";
-import { structuresApi } from "@/src/infrastructure/api/structures.api";
+import { useStructuresStore } from "@/src/presentation/stores/structures.store";
 import type { Structure, StructureFilters } from "@/src/core/entities/structure-entity";
 import { StructureUsageButton } from "@/src/presentation/components/structures/structure-usage-button"; 
 import { StructureForm } from "@/src/presentation/components/structures/structures-form";
+import { PaginationControls } from "@/src/presentation/components/common/pagination-controls";
 import {
   Button,
   TextInput,
@@ -23,8 +24,13 @@ import {
 } from "@mantine/core";
 
 export default function StructuresPage() {
-  const [structuresList, setStructuresList] = useState<Structure[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const { 
+    structuresList, 
+    meta, 
+    isLoading, 
+    fetchStructuresPaginated, 
+    deleteStructure 
+  } = useStructuresStore();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedStructure, setSelectedStructure] = useState<Structure | null>(null);
@@ -33,26 +39,21 @@ export default function StructuresPage() {
   // Filtros
   const [filters, setFilters] = useState<StructureFilters>({
     page: 1,
-    limit: 50,
+    limit: 20,
     name: undefined,
     category: undefined,
   });
 
-  const fetchStructures = async () => {
-    try {
-      setIsLoading(true);
-      const data = await structuresApi.getAll(filters);
-      setStructuresList(data);
-    } catch (error) {
-      console.error("Error cargando estructuras:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   useEffect(() => {
-    fetchStructures();
-  }, [filters.page, filters.limit, filters.name, filters.category]);
+    const cleanFilters: StructureFilters = {};
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined && value !== "" && value !== null) {
+        cleanFilters[key as keyof StructureFilters] = value as any;
+      }
+    });
+
+    fetchStructuresPaginated(cleanFilters, true);
+  }, [fetchStructuresPaginated, filters]);
 
   const handleEdit = (item: Structure) => {
     setSelectedStructure(item);
@@ -62,8 +63,9 @@ export default function StructuresPage() {
   const handleDelete = async (id: string) => {
     if (confirm("¿Estás seguro de eliminar esta estructura?")) {
       try {
-        await structuresApi.delete(id);
-        fetchStructures();
+        await deleteStructure(id);
+        // Refetch después de eliminar
+        fetchStructuresPaginated(filters, true);
       } catch (error) {
         console.error("Error al eliminar", error);
       }
@@ -72,15 +74,11 @@ export default function StructuresPage() {
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);
-    fetchStructures();
+    fetchStructuresPaginated(filters, true);
   };
 
   const handleClearFilters = () => {
-    setFilters({ page: 1, limit: 50, name: undefined, category: undefined });
-  };
-
-  const getInitials = (name: string) => {
-    return name.substring(0, 2).toUpperCase();
+    setFilters({ page: 1, limit: 20, name: undefined, category: undefined });
   };
 
   const formatCategory = (cat: string) => {
@@ -143,7 +141,7 @@ export default function StructuresPage() {
                   label="Categoría"
                   placeholder="Ej: CATEGORY_A"
                   value={filters.category || ""}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value || undefined })}
+                  onChange={(e) => setFilters({ ...filters, category: e.target.value || undefined, page: 1 })}
                   styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
                 />
               </Group>
@@ -163,74 +161,86 @@ export default function StructuresPage() {
             </Button>
           </Box>
         ) : (
-          <Paper shadow="xs" radius="md" p="md" style={{ backgroundColor: "#1a1a1a", border: "1px solid #2d2d2d", overflowX: "auto" }}>
-            <Table verticalSpacing="sm" highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th style={{ color: "#9ca3af" }}>Nombre</Table.Th>
-                  <Table.Th style={{ color: "#9ca3af" }}>Categoría</Table.Th>
-                  <Table.Th style={{ color: "#9ca3af" }}>Medida</Table.Th>
-                  <Table.Th style={{ color: "#9ca3af" }}>Total</Table.Th>
-                  <Table.Th style={{ color: "#9ca3af" }}>Stock</Table.Th> 
-                  <Table.Th style={{ color: "#9ca3af", textAlign: "right" }}>Acciones</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {structuresList.map((item) => (
-                  <Table.Tr key={item.id} style={{ color: "white" }}>
-                    <Table.Td>
-                      <Group gap="sm">
-                        <Text size="sm" fw={500} c="white">
-                          {item.name}
-                        </Text>
-                      </Group>
-                    </Table.Td>
-                    <Table.Td>
-                      {item.category ? (
-                        <Badge color="gray" variant="light" size="sm">
-                          {formatCategory(item.category)}
-                        </Badge>
-                      ) : (
-                        <Text size="sm" c="dimmed">-</Text>
-                      )}
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{item.measure || "-"}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm" fw={700} c="blue">
-                          {item.stock} unidades
-                      </Text>
-                  </Table.Td>
-                    <Table.Td>
-                       <Badge 
-                        color={item.available > 0 ? "green" : "red"} 
-                        variant="light"
-                        size="md"
-                      >
-                        {item.available} unidades disp.
-                      </Badge>
-                    </Table.Td>
-
-                    <Table.Td>
-                      <Group gap="xs" justify="flex-end" wrap="nowrap">
-                        <StructureUsageButton 
-                          structureId={item.id} 
-                          structureName={item.name} 
-                        />
-                        <Button size="xs" color="blue" variant="filled" onClick={() => handleEdit(item)}>
-                          MODIFICAR
-                        </Button>
-                        <Button size="xs" color="red" variant="filled" onClick={() => handleDelete(item.id)}>
-                          ELIMINAR
-                        </Button>
-                      </Group>
-                    </Table.Td>
+          <>
+            <Paper shadow="xs" radius="md" p="md" style={{ backgroundColor: "#1a1a1a", border: "1px solid #2d2d2d", overflowX: "auto" }}>
+              <Table verticalSpacing="sm" highlightOnHover>
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th style={{ color: "#9ca3af" }}>Nombre</Table.Th>
+                    <Table.Th style={{ color: "#9ca3af" }}>Categoría</Table.Th>
+                    <Table.Th style={{ color: "#9ca3af" }}>Medida</Table.Th>
+                    <Table.Th style={{ color: "#9ca3af" }}>Total</Table.Th>
+                    <Table.Th style={{ color: "#9ca3af" }}>Stock</Table.Th> 
+                    <Table.Th style={{ color: "#9ca3af", textAlign: "right" }}>Acciones</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
-          </Paper>
+                </Table.Thead>
+                <Table.Tbody>
+                  {structuresList.map((item) => (
+                    <Table.Tr key={item.id} style={{ color: "white" }}>
+                      <Table.Td>
+                        <Group gap="sm">
+                          <Text size="sm" fw={500} c="white">
+                            {item.name}
+                          </Text>
+                        </Group>
+                      </Table.Td>
+                      <Table.Td>
+                        {item.category ? (
+                          <Badge color="gray" variant="light" size="sm">
+                            {formatCategory(item.category)}
+                          </Badge>
+                        ) : (
+                          <Text size="sm" c="dimmed">-</Text>
+                        )}
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm">{item.measure || "-"}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" fw={700} c="blue">
+                            {item.stock} unidades
+                        </Text>
+                    </Table.Td>
+                      <Table.Td>
+                         <Badge 
+                          color={item.available > 0 ? "green" : "red"} 
+                          variant="light"
+                          size="md"
+                        >
+                          {item.available} unidades disp.
+                        </Badge>
+                      </Table.Td>
+
+                      <Table.Td>
+                        <Group gap="xs" justify="flex-end" wrap="nowrap">
+                          <StructureUsageButton 
+                            structureId={item.id} 
+                            structureName={item.name} 
+                          />
+                          <Button size="xs" color="blue" variant="filled" onClick={() => handleEdit(item)}>
+                            MODIFICAR
+                          </Button>
+                          <Button size="xs" color="red" variant="filled" onClick={() => handleDelete(item.id)}>
+                            ELIMINAR
+                          </Button>
+                        </Group>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </Paper>
+
+            <Box mt="xl">
+              <PaginationControls
+                meta={meta}
+                currentPage={filters.page || 1}
+                currentLimit={filters.limit || 20}
+                onPageChange={(page) => setFilters({ ...filters, page })}
+                onLimitChange={(limit) => setFilters({ ...filters, limit, page: 1 })}
+              />
+            </Box>
+          </>
         )}
       </Box>
 
