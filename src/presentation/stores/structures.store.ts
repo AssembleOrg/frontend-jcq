@@ -18,6 +18,7 @@ interface StructuresState {
 
   // Actions
   fetchStructures: (filters?: StructureFilters, force?: boolean) => Promise<void>;
+  fetchStructuresPaginated: (filters?: StructureFilters, force?: boolean) => Promise<void>;
   getStructureById: (id: string) => Promise<Structure | null>;
   createStructure: (data: CreateStructureDto) => Promise<Structure | null>;
   updateStructure: (id: string, data: UpdateStructureDto) => Promise<Structure | null>;
@@ -61,6 +62,32 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
         isLoading: false,
         error: error instanceof Error ? error.message : String(error) || 'Error al cargar estructuras',
       });
+    }
+  },
+
+  fetchStructuresPaginated: async (filters?: StructureFilters, force = false) => {
+    const currentTimestamp = Date.now();
+    const CACHE_DURATION = 5 * 60 * 1000;
+
+    if (
+      !force &&
+      get().structuresList.length > 0 &&
+      currentTimestamp - get().lastFetchTimestamp < CACHE_DURATION
+    ) {
+      return;
+    }
+
+    set({ isLoading: true, error: null });
+    try {
+      const { data, meta } = await structuresApi.getPaginated(filters);
+      set({
+        structuresList: data,
+        meta,
+        isLoading: false,
+        lastFetchTimestamp: currentTimestamp,
+      });
+    } catch (error: any) {
+      set({ isLoading: false, error: error.message || 'Error al cargar estructuras' });
     }
   },
 

@@ -27,6 +27,16 @@ export const structuresApi = {
     return data.data;
   },
 
+  async getPaginated(filters?: StructureFilters): Promise<{ data: Structure[]; meta: any }> {
+    const { data } = await apiClient.get<ApiResponse<Structure[]>>('/structures/pagination', {
+      params: filters,
+    });
+    return {
+      data: data.data,
+      meta: (data as any).meta, 
+    };
+  },
+
   async update(id: string, structureData: UpdateStructureDto): Promise<Structure> {
     const { data } = await apiClient.patch<ApiResponse<Structure>>(`/structures/${id}`, structureData);
     return data.data;
