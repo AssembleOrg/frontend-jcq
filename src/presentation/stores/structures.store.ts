@@ -18,7 +18,7 @@ interface StructuresState {
 
   // Actions
   fetchStructures: (filters?: StructureFilters, force?: boolean) => Promise<void>;
-  fetchStructuresPaginated: (filters?: StructureFilters, force?: boolean) => Promise<void>;
+  fetchStructuresPaginated: (filters?: StructureFilters) => Promise<void>;
   getStructureById: (id: string) => Promise<Structure | null>;
   createStructure: (data: CreateStructureDto) => Promise<Structure | null>;
   updateStructure: (id: string, data: UpdateStructureDto) => Promise<Structure | null>;
@@ -65,18 +65,7 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
     }
   },
 
-  fetchStructuresPaginated: async (filters?: StructureFilters, force = false) => {
-    const currentTimestamp = Date.now();
-    const CACHE_DURATION = 5 * 60 * 1000;
-
-    if (
-      !force &&
-      get().structuresList.length > 0 &&
-      currentTimestamp - get().lastFetchTimestamp < CACHE_DURATION
-    ) {
-      return;
-    }
-
+  fetchStructuresPaginated: async (filters?: StructureFilters) => {
     set({ isLoading: true, error: null });
     try {
       const { data, meta } = await structuresApi.getPaginated(filters);
@@ -84,12 +73,13 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
         structuresList: data,
         meta,
         isLoading: false,
-        lastFetchTimestamp: currentTimestamp,
+        lastFetchTimestamp: Date.now(),
       });
     } catch (error: any) {
       set({ isLoading: false, error: error.message || 'Error al cargar estructuras' });
     }
   },
+
 
   getStructureById: async (id: string) => {
     const existing = get().structuresList.find(s => s.id === id);
