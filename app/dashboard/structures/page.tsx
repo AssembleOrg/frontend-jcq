@@ -21,6 +21,7 @@ import {
   Table,
   Paper,
   Modal,
+  Select,
 } from "@mantine/core";
 
 export default function StructuresPage() {
@@ -52,8 +53,9 @@ export default function StructuresPage() {
       }
     });
 
-    fetchStructuresPaginated(cleanFilters, true);
+    fetchStructuresPaginated(cleanFilters);
   }, [fetchStructuresPaginated, filters]);
+
 
   const handleEdit = (item: Structure) => {
     setSelectedStructure(item);
@@ -65,7 +67,7 @@ export default function StructuresPage() {
       try {
         await deleteStructure(id);
         // Refetch después de eliminar
-        fetchStructuresPaginated(filters, true);
+        fetchStructuresPaginated(filters);
       } catch (error) {
         console.error("Error al eliminar", error);
       }
@@ -74,7 +76,7 @@ export default function StructuresPage() {
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);
-    fetchStructuresPaginated(filters, true);
+    fetchStructuresPaginated(filters);
   };
 
   const handleClearFilters = () => {
@@ -137,12 +139,23 @@ export default function StructuresPage() {
           <Collapse in={showAdvancedFilters}>
             <Box p="md" style={{ backgroundColor: "#1a1a1a", borderRadius: 8, border: "1px solid #2d2d2d" }}>
               <Group grow>
-                <TextInput
+                <Select
                   label="Categoría"
-                  placeholder="Ej: CATEGORY_A"
-                  value={filters.category || ""}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value || undefined, page: 1 })}
-                  styles={{ input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, label: { color: "#9ca3af" } }}
+                  placeholder="Seleccionar categoría"
+                  data={[
+                    { value: "CATEGORY_A", label: "Categoría A" },
+                    { value: "CATEGORY_B", label: "Categoría B" },
+                    { value: "CATEGORY_C", label: "Categoría C" },
+                  ]}
+                  value={filters.category || null}
+                  onChange={(value) => setFilters({ ...filters, category: value || undefined, page: 1 })}
+                  clearable
+                  styles={{ 
+                    input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, 
+                    label: { color: "#9ca3af" },
+                    dropdown: { backgroundColor: "#1a1a1a", borderColor: "#2d2d2d" },
+                    option: { color: "white", '&[data-selected]': { backgroundColor: "#ff6b35" } }
+                  }}
                 />
               </Group>
             </Box>
