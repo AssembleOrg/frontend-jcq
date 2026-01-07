@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Button, TextInput, NumberInput, Select, Group, Stack, Box, LoadingOverlay } from "@mantine/core";
+import { Button, TextInput, NumberInput, Textarea, Select, Group, Stack, Box, LoadingOverlay } from "@mantine/core";
 import { structuresApi } from "@/src/infrastructure/api/structures.api"; 
-import type { Structure, CreateStructureDto } from "@/src/core/entities/structure-entity"; 
+import { useStructuresStore } from "@/src/presentation/stores/structures.store";
+import { showToast } from "@/src/presentation/utils/toast";
+import type { Structure, CreateStructureDto, StructureCategory } from "@/src/core/entities/structure-entity"; 
 
 export interface StructureFormProps {
   initialData?: Structure | null;
@@ -13,31 +15,39 @@ export interface StructureFormProps {
 
 export const StructureForm = ({ initialData, onClose, onSuccess }: StructureFormProps) => {
   const [isLoading, setIsLoading] = useState(false);
+  const { categoriesList, fetchCategories, isCategoriesLoading } = useStructuresStore();
   
   const [formData, setFormData] = useState<CreateStructureDto>({
     name: "",
-    category: "CATEGORY_A", 
+    categoryId: "", 
     measure: "",
+    description: "",
     stock: 0,
   });
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   useEffect(() => {
     if (initialData) {
       setFormData({
         name: initialData.name || "",
-        category: initialData.category || "CATEGORY_A",
+        categoryId: initialData.categoryId || "",
         measure: initialData.measure || "",
+        description: initialData.description || "",
         stock: initialData.stock || 0,
       });
     } else {
       setFormData({
         name: "",
-        category: "CATEGORY_A",
+        categoryId: categoriesList.length > 0 ? categoriesList[0].id : "",
         measure: "",
+        description: "",
         stock: 0,
       });
     }
-  }, [initialData]);
+  }, [initialData, categoriesList]);
 
   const handleChangeText = (field: keyof CreateStructureDto, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -47,6 +57,17 @@ export const StructureForm = ({ initialData, onClose, onSuccess }: StructureForm
     setFormData((prev) => ({ ...prev, [field]: Number(value) }));
   };
 
+  const getErrorMessage = (error: any): string => {
+    // Try to extract the message from the backend response
+    if (error?.response?.data?.message) {
+      return error.response.data.message;
+    }
+    if (error?.message) {
+      return error.message;
+    }
+    return "Error al guardar la estructura";
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -54,13 +75,16 @@ export const StructureForm = ({ initialData, onClose, onSuccess }: StructureForm
     try {
       if (initialData) {
         await structuresApi.update(initialData.id, formData);
+        showToast.success("Estructura actualizada exitosamente");
       } else {
         await structuresApi.create(formData);
+        showToast.success("Estructura creada exitosamente");
       }
       onSuccess();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error guardando estructura:", error);
-      alert("Error al guardar. Revisa la consola.");
+      const errorMessage = getErrorMessage(error);
+      showToast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -73,9 +97,14 @@ export const StructureForm = ({ initialData, onClose, onSuccess }: StructureForm
     option: { hover: { backgroundColor: "#2d2d2d" } } 
   };
 
+  const categoryOptions = categoriesList.map((cat: StructureCategory) => ({
+    value: cat.id,
+    label: cat.name,
+  }));
+
   return (
     <Box component="form" onSubmit={handleSubmit} pos="relative">
-      <LoadingOverlay visible={isLoading} overlayProps={{ radius: "sm", blur: 2 }} />
+      <LoadingOverlay visible={isLoading || isCategoriesLoading} overlayProps={{ radius: "sm", blur: 2 }} />
       
       <Stack gap="md">
         <TextInput
@@ -108,27 +137,35 @@ export const StructureForm = ({ initialData, onClose, onSuccess }: StructureForm
           />
         </Group>
 
+        <Textarea
+          label="Descripción (Opcional)"
+          placeholder="Descripción de la estructura..."
+          value={formData.description || ""}
+          onChange={(e) => handleChangeText("description", e.target.value)}
+          minRows={2}
+          autosize
+          styles={commonInputStyles}
+        />
+
         <Select
           label="Categoría"
-          placeholder="Selecciona una categoría"
+          placeholder={categoriesList.length === 0 ? "No hay categorías - Crea una primero" : "Buscar categoría..."}
           required
-          data={[
-            { value: "CATEGORY_A", label: "Categoría A" },
-            { value: "CATEGORY_B", label: "Categoría B" },
-            { value: "CATEGORY_C", label: "Categoría C" },
-          ]}
-          value={formData.category}
-          onChange={(val) => handleChangeText("category", val || "CATEGORY_A")}
+          data={categoryOptions}
+          value={formData.categoryId || null}
+          onChange={(val) => handleChangeText("categoryId", val || "")}
           styles={commonInputStyles}
           checkIconPosition="right"
           comboboxProps={{ transitionProps: { transition: 'pop', duration: 200 } }}
+          disabled={categoriesList.length === 0}
+          searchable
         />
 
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onClose} styles={{ root: { backgroundColor: "transparent", borderColor: "#2d2d2d", color: "white" } }}>
             Cancelar
           </Button>
-          <Button type="submit" color="orange" loading={isLoading}>
+          <Button type="submit" color="orange" loading={isLoading} disabled={!formData.categoryId}>
             {initialData ? "Guardar Cambios" : "Crear Estructura"}
           </Button>
         </Group>
