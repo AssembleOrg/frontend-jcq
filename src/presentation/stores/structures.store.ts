@@ -4,9 +4,25 @@ import type {
   CreateStructureDto,
   UpdateStructureDto,
   StructureFilters,
-  PaginationMeta, 
+  PaginationMeta,
+  StructureCategory,
+  CreateStructureCategoryDto,
+  UpdateStructureCategoryDto,
+  StructureCategoryFilters,
 } from '@/src/core/entities';
 import { structuresApi } from '@/src/infrastructure/api/structures.api'; 
+import { showToast } from '@/src/presentation/utils/toast';
+
+// Helper to extract error message from API response
+const getErrorMessage = (error: any, defaultMessage: string): string => {
+  if (error?.response?.data?.message) {
+    return error.response.data.message;
+  }
+  if (error?.message) {
+    return error.message;
+  }
+  return defaultMessage;
+};
 
 interface StructuresState {
   structuresList: Structure[];
@@ -16,7 +32,11 @@ interface StructuresState {
   error: string | null;
   lastFetchTimestamp: number;
 
-  // Actions
+  // Categories
+  categoriesList: StructureCategory[];
+  isCategoriesLoading: boolean;
+
+  // Actions - Structures
   fetchStructures: (filters?: StructureFilters, force?: boolean) => Promise<void>;
   fetchStructuresPaginated: (filters?: StructureFilters) => Promise<void>;
   getStructureById: (id: string) => Promise<Structure | null>;
@@ -25,6 +45,12 @@ interface StructuresState {
   deleteStructure: (id: string) => Promise<void>;
   setSelectedStructure: (structure: Structure | null) => void;
   clearError: () => void;
+
+  // Actions - Categories
+  fetchCategories: (filters?: StructureCategoryFilters) => Promise<void>;
+  createCategory: (data: CreateStructureCategoryDto) => Promise<StructureCategory | null>;
+  updateCategory: (id: string, data: UpdateStructureCategoryDto) => Promise<StructureCategory | null>;
+  deleteCategory: (id: string) => Promise<void>;
 }
 
 export const useStructuresStore = create<StructuresState>((set, get) => ({
@@ -34,6 +60,76 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
   isLoading: false,
   error: null,
   lastFetchTimestamp: 0,
+  categoriesList: [],
+  isCategoriesLoading: false,
+
+  // CATEGORY ACTIONS
+  
+  fetchCategories: async (filters?: StructureCategoryFilters) => {
+    set({ isCategoriesLoading: true });
+    try {
+      const data = await structuresApi.getAllCategories(filters);
+      set({ categoriesList: data, isCategoriesLoading: false });
+    } catch (error: any) {
+      const errorMessage = getErrorMessage(error, 'Error al cargar categorías');
+      set({ isCategoriesLoading: false, error: errorMessage });
+      showToast.error(errorMessage);
+    }
+  },
+
+  createCategory: async (data: CreateStructureCategoryDto) => {
+    set({ isCategoriesLoading: true, error: null });
+    try {
+      const newCategory = await structuresApi.createCategory(data);
+      set((state) => ({
+        categoriesList: [...state.categoriesList, newCategory],
+        isCategoriesLoading: false,
+      }));
+      showToast.success('Categoría creada exitosamente');
+      return newCategory;
+    } catch (error: any) {
+      const errorMessage = getErrorMessage(error, 'Error al crear categoría');
+      set({ isCategoriesLoading: false, error: errorMessage });
+      showToast.error(errorMessage);
+      return null;
+    }
+  },
+
+  updateCategory: async (id: string, data: UpdateStructureCategoryDto) => {
+    set({ isCategoriesLoading: true, error: null });
+    try {
+      const updatedCategory = await structuresApi.updateCategory(id, data);
+      set((state) => ({
+        categoriesList: state.categoriesList.map((c) => (c.id === id ? updatedCategory : c)),
+        isCategoriesLoading: false,
+      }));
+      showToast.success('Categoría actualizada exitosamente');
+      return updatedCategory;
+    } catch (error: any) {
+      const errorMessage = getErrorMessage(error, 'Error al actualizar categoría');
+      set({ isCategoriesLoading: false, error: errorMessage });
+      showToast.error(errorMessage);
+      return null;
+    }
+  },
+
+  deleteCategory: async (id: string) => {
+    set({ isCategoriesLoading: true, error: null });
+    try {
+      await structuresApi.deleteCategory(id);
+      set((state) => ({
+        categoriesList: state.categoriesList.filter((c) => c.id !== id),
+        isCategoriesLoading: false,
+      }));
+      showToast.success('Categoría eliminada exitosamente');
+    } catch (error: any) {
+      const errorMessage = getErrorMessage(error, 'Error al eliminar categoría');
+      set({ isCategoriesLoading: false, error: errorMessage });
+      showToast.error(errorMessage);
+    }
+  },
+
+  // STRUCTURE ACTIONS
 
   fetchStructures: async (filters?: StructureFilters, force = false) => {
     const currentTimestamp = Date.now();
@@ -53,14 +149,14 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
       const data = await structuresApi.getAll(filters);
       set({
         structuresList: data,
-        // TO-DO ? AQUI SE INCLUIRIA META (PAGINACION)
         isLoading: false,
         lastFetchTimestamp: currentTimestamp,
       });
     } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, 'Error al cargar estructuras');
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : String(error) || 'Error al cargar estructuras',
+        error: errorMessage,
       });
     }
   },
@@ -76,7 +172,8 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
         lastFetchTimestamp: Date.now(),
       });
     } catch (error: any) {
-      set({ isLoading: false, error: error.message || 'Error al cargar estructuras' });
+      const errorMessage = getErrorMessage(error, 'Error al cargar estructuras');
+      set({ isLoading: false, error: errorMessage });
     }
   },
 
@@ -94,9 +191,10 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
       set({ selectedStructure: structure, isLoading: false });
       return structure;
     } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, 'Error al obtener estructura');
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : String(error) || 'Error al obtener estructura',
+        error: errorMessage,
       });
       return null;
     }
@@ -110,12 +208,15 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
         structuresList: [newStructure, ...state.structuresList], 
         isLoading: false,
       }));
+      showToast.success('Estructura creada exitosamente');
       return newStructure;
     } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, 'Error al crear estructura');
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : String(error) || 'Error al crear estructura',
+        error: errorMessage,
       });
+      showToast.error(errorMessage);
       return null;
     }
   },
@@ -129,12 +230,15 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
         selectedStructure: state.selectedStructure?.id === id ? updatedStructure : state.selectedStructure,
         isLoading: false,
       }));
+      showToast.success('Estructura actualizada exitosamente');
       return updatedStructure;
     } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, 'Error al actualizar estructura');
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : String(error) || 'Error al actualizar estructura',
+        error: errorMessage,
       });
+      showToast.error(errorMessage);
       return null;
     }
   },
@@ -148,11 +252,14 @@ export const useStructuresStore = create<StructuresState>((set, get) => ({
         selectedStructure: state.selectedStructure?.id === id ? null : state.selectedStructure,
         isLoading: false,
       }));
+      showToast.success('Estructura eliminada exitosamente');
     } catch (error: unknown) {
+      const errorMessage = getErrorMessage(error, 'Error al eliminar estructura');
       set({
         isLoading: false,
-        error: error instanceof Error ? error.message : String(error) || 'Error al eliminar estructura',
+        error: errorMessage,
       });
+      showToast.error(errorMessage);
     }
   },
 

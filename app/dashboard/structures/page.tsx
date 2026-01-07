@@ -1,12 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Filter, X } from "lucide-react";
+import { Plus, Filter, X, Settings } from "lucide-react";
 import { Header } from "@/src/presentation/components/layout/header";
 import { useStructuresStore } from "@/src/presentation/stores/structures.store";
-import type { Structure, StructureFilters } from "@/src/core/entities/structure-entity";
+import type { Structure, StructureFilters, StructureCategory } from "@/src/core/entities/structure-entity";
 import { StructureUsageButton } from "@/src/presentation/components/structures/structure-usage-button"; 
 import { StructureForm } from "@/src/presentation/components/structures/structures-form";
+import { StructureCategoriesManager } from "@/src/presentation/components/structures/structure-categories-manager";
 import { PaginationControls } from "@/src/presentation/components/common/pagination-controls";
 import {
   Button,
@@ -22,6 +23,7 @@ import {
   Paper,
   Modal,
   Select,
+  Tooltip,
 } from "@mantine/core";
 
 export default function StructuresPage() {
@@ -30,20 +32,29 @@ export default function StructuresPage() {
     meta, 
     isLoading, 
     fetchStructuresPaginated, 
-    deleteStructure 
+    deleteStructure,
+    categoriesList,
+    fetchCategories,
   } = useStructuresStore();
   
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedStructure, setSelectedStructure] = useState<Structure | null>(null);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Category modal
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
 
   // Filtros
   const [filters, setFilters] = useState<StructureFilters>({
     page: 1,
     limit: 20,
     name: undefined,
-    category: undefined,
+    categoryId: undefined,
   });
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   useEffect(() => {
     const cleanFilters: StructureFilters = {};
@@ -80,17 +91,13 @@ export default function StructuresPage() {
   };
 
   const handleClearFilters = () => {
-    setFilters({ page: 1, limit: 20, name: undefined, category: undefined });
+    setFilters({ page: 1, limit: 20, name: undefined, categoryId: undefined });
   };
 
-  const formatCategory = (cat: string) => {
-    const map: Record<string, string> = {
-      CATEGORY_A: "Categoría A",
-      CATEGORY_B: "Categoría B",
-      CATEGORY_C: "Categoría C",
-    };
-    return map[cat] || cat;
-  };
+  const categoryOptions = categoriesList.map((cat: StructureCategory) => ({
+    value: cat.id,
+    label: cat.name,
+  }));
 
   return (
     <Box>
@@ -98,16 +105,28 @@ export default function StructuresPage() {
         title="Estructuras"
         description="Catálogo de estructuras y stock"
         action={
-          <Button
-            color="orange"
-            leftSection={<Plus size={16} />}
-            onClick={() => {
-              setSelectedStructure(null);
-              setIsFormOpen(true);
-            }}
-          >
-            Nueva Estructura
-          </Button>
+          <Group gap="sm">
+            <Tooltip label="Gestionar categorías">
+              <Button
+                variant="light"
+                color="gray"
+                leftSection={<Settings size={16} />}
+                onClick={() => setIsCategoryModalOpen(true)}
+              >
+                Categorías
+              </Button>
+            </Tooltip>
+            <Button
+              color="orange"
+              leftSection={<Plus size={16} />}
+              onClick={() => {
+                setSelectedStructure(null);
+                setIsFormOpen(true);
+              }}
+            >
+              Nueva Estructura
+            </Button>
+          </Group>
         }
       />
 
@@ -129,7 +148,7 @@ export default function StructuresPage() {
             >
               Más Filtros
             </Button>
-            {(filters.name || filters.category) && (
+            {(filters.name || filters.categoryId) && (
               <Button variant="subtle" color="red" leftSection={<X size={16} />} onClick={handleClearFilters}>
                 Limpiar
               </Button>
@@ -141,20 +160,18 @@ export default function StructuresPage() {
               <Group grow>
                 <Select
                   label="Categoría"
-                  placeholder="Seleccionar categoría"
-                  data={[
-                    { value: "CATEGORY_A", label: "Categoría A" },
-                    { value: "CATEGORY_B", label: "Categoría B" },
-                    { value: "CATEGORY_C", label: "Categoría C" },
-                  ]}
-                  value={filters.category || null}
-                  onChange={(value) => setFilters({ ...filters, category: value || undefined, page: 1 })}
+                  placeholder={categoriesList.length === 0 ? "No hay categorías" : "Buscar categoría..."}
+                  data={categoryOptions}
+                  value={filters.categoryId || null}
+                  onChange={(value) => setFilters({ ...filters, categoryId: value || undefined, page: 1 })}
                   clearable
+                  searchable
+                  disabled={categoriesList.length === 0}
                   styles={{ 
                     input: { backgroundColor: "#0f0f0f", borderColor: "#2d2d2d", color: "white" }, 
                     label: { color: "#9ca3af" },
                     dropdown: { backgroundColor: "#1a1a1a", borderColor: "#2d2d2d" },
-                    option: { color: "white", '&[data-selected]': { backgroundColor: "#ff6b35" } }
+                    option: { color: "white" }
                   }}
                 />
               </Group>
@@ -182,6 +199,7 @@ export default function StructuresPage() {
                     <Table.Th style={{ color: "#9ca3af" }}>Nombre</Table.Th>
                     <Table.Th style={{ color: "#9ca3af" }}>Categoría</Table.Th>
                     <Table.Th style={{ color: "#9ca3af" }}>Medida</Table.Th>
+                    <Table.Th style={{ color: "#9ca3af" }}>Descripción</Table.Th>
                     <Table.Th style={{ color: "#9ca3af" }}>Total</Table.Th>
                     <Table.Th style={{ color: "#9ca3af" }}>Stock</Table.Th> 
                     <Table.Th style={{ color: "#9ca3af", textAlign: "right" }}>Acciones</Table.Th>
@@ -200,7 +218,7 @@ export default function StructuresPage() {
                       <Table.Td>
                         {item.category ? (
                           <Badge color="gray" variant="light" size="sm">
-                            {formatCategory(item.category)}
+                            {item.category.name}
                           </Badge>
                         ) : (
                           <Text size="sm" c="dimmed">-</Text>
@@ -208,6 +226,11 @@ export default function StructuresPage() {
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm">{item.measure || "-"}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="sm" c="dimmed" lineClamp={1} style={{ maxWidth: 200 }}>
+                          {item.description || "-"}
+                        </Text>
                       </Table.Td>
                       <Table.Td>
                         <Text size="sm" fw={700} c="blue">
@@ -257,6 +280,7 @@ export default function StructuresPage() {
         )}
       </Box>
 
+      {/* Structure Form Modal */}
       <Modal 
         opened={isFormOpen} 
         onClose={() => setIsFormOpen(false)}
@@ -275,6 +299,23 @@ export default function StructuresPage() {
           onClose={() => setIsFormOpen(false)} 
           onSuccess={handleFormSuccess} 
         />
+      </Modal>
+
+      {/* Category Management Modal */}
+      <Modal
+        opened={isCategoryModalOpen}
+        onClose={() => setIsCategoryModalOpen(false)}
+        title="Gestionar Categorías"
+        size="md"
+        centered
+        styles={{
+          header: { backgroundColor: "#1a1a1a", color: "white" },
+          content: { backgroundColor: "#1a1a1a", border: "1px solid #2d2d2d" },
+          title: { fontWeight: 'bold' },
+          close: { color: "#9ca3af" }
+        }}
+      >
+        <StructureCategoriesManager />
       </Modal>
     </Box>
   );

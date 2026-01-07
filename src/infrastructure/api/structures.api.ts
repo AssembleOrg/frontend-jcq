@@ -5,10 +5,39 @@ import type {
   CreateStructureDto,
   UpdateStructureDto,
   StructureFilters,
+  StructureCategory,
+  CreateStructureCategoryDto,
+  UpdateStructureCategoryDto,
+  StructureCategoryFilters,
 } from '@/src/core/entities'; 
 import apiClient from './client';
 
 export const structuresApi = {
+  
+  // CATEGORY ENDPOINTS
+  
+  async createCategory(data: CreateStructureCategoryDto): Promise<StructureCategory> {
+    const { data: response } = await apiClient.post<ApiResponse<StructureCategory>>('/structures/categories', data);
+    return response.data;
+  },
+
+  async getAllCategories(filters?: StructureCategoryFilters): Promise<StructureCategory[]> {
+    const { data } = await apiClient.get<ApiResponse<StructureCategory[]>>('/structures/categories', { 
+      params: filters 
+    });
+    return data.data;
+  },
+
+  async updateCategory(id: string, data: UpdateStructureCategoryDto): Promise<StructureCategory> {
+    const { data: response } = await apiClient.patch<ApiResponse<StructureCategory>>(`/structures/categories/${id}`, data);
+    return response.data;
+  },
+
+  async deleteCategory(id: string): Promise<void> {
+    await apiClient.delete(`/structures/categories/${id}`);
+  },
+
+  // STRUCTURE ENDPOINTS
   
   async getAll(filters?: StructureFilters): Promise<Structure[]> {
     const { data } = await apiClient.get<ApiResponse<Structure[]>>('/structures', { 
