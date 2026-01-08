@@ -266,7 +266,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
             <Text size="xs" fw={700} c="dimmed" mb="sm" tt="uppercase">Jornada Normal</Text>
             
             <SimpleGrid cols={{ base: 2, xs: 3, sm: 4 }} spacing="xs" verticalSpacing="xs">
-              {['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'].map((day) => 
+              {['sabado', 'domingo', 'lunes', 'martes', 'miercoles', 'jueves', 'viernes'].map((day) => 
                 renderMoneyInput(day, day.slice(0,3).toUpperCase())
               )}
             </SimpleGrid>
@@ -279,7 +279,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
             />
 
             <SimpleGrid cols={{ base: 2, xs: 3, sm: 4 }} spacing="xs" verticalSpacing="xs">
-              {['lunesExtra', 'martesExtra', 'miercolesExtra', 'juevesExtra', 'viernesExtra', 'sabadoExtra', 'domingoExtra'].map((day) => 
+              {['sabadoExtra', 'domingoExtra', 'lunesExtra', 'martesExtra', 'miercolesExtra', 'juevesExtra', 'viernesExtra'].map((day) => 
                 renderMoneyInput(day, day.replace('Extra','').slice(0,3).toUpperCase() + ' (EX)')
               )}
             </SimpleGrid>
@@ -471,6 +471,14 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                <Text size="xs" fw={700} c="dimmed" mb="xs" tt="uppercase">Pagos por día</Text>
                                <Stack gap={4}>
                                  <Group justify="space-between">
+                                   <Text size="xs">Sáb:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursSaturday + record.hoursSaturdayExtra).toLocaleString('es-AR')}</Text>
+                                 </Group>
+                                 <Group justify="space-between">
+                                   <Text size="xs">Dom:</Text>
+                                   <Text size="xs" fw={700} c="orange">${(record.hoursSunday + record.hoursSundayExtra).toLocaleString('es-AR')}</Text>
+                                 </Group>
+                                 <Group justify="space-between">
                                    <Text size="xs">Lun:</Text>
                                    <Text size="xs" fw={700} c="orange">${(record.hoursMonday + record.hoursMondayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
@@ -489,14 +497,6 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                  <Group justify="space-between">
                                    <Text size="xs">Vie:</Text>
                                    <Text size="xs" fw={700} c="orange">${(record.hoursFriday + record.hoursFridayExtra).toLocaleString('es-AR')}</Text>
-                                 </Group>
-                                 <Group justify="space-between">
-                                   <Text size="xs">Sáb:</Text>
-                                   <Text size="xs" fw={700} c="orange">${(record.hoursSaturday + record.hoursSaturdayExtra).toLocaleString('es-AR')}</Text>
-                                 </Group>
-                                 <Group justify="space-between">
-                                   <Text size="xs">Dom:</Text>
-                                   <Text size="xs" fw={700} c="orange">${(record.hoursSunday + record.hoursSundayExtra).toLocaleString('es-AR')}</Text>
                                  </Group>
                                  {record.hoursLastWeek > 0 && (
                                      <Group justify="space-between">

@@ -143,13 +143,13 @@ export const WorkRecordPdf = ({ data }: { data: PdfData }) => {
                     <Text style={styles.headerCellNormal}>NORMAL ($)</Text>
                     <Text style={styles.headerCellExtra}>EXTRA ($)</Text>
                 </View>
+                {renderRow('Sábado', data.amountsDetail.sabado)}
+                {renderRow('Domingo', data.amountsDetail.domingo)}
                 {renderRow('Lunes', data.amountsDetail.lunes)}
                 {renderRow('Martes', data.amountsDetail.martes)}
                 {renderRow('Miércoles', data.amountsDetail.miercoles)}
                 {renderRow('Jueves', data.amountsDetail.jueves)}
                 {renderRow('Viernes', data.amountsDetail.viernes)}
-                {renderRow('Sábado', data.amountsDetail.sabado)}
-                {renderRow('Domingo', data.amountsDetail.domingo)}
             </View>
 
             <View style={styles.totalContainer}>
