@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Calendar, FileText, Receipt } from "lucide-react";
+import { Plus, Trash2, Calendar, FileText, Receipt, DollarSign } from "lucide-react";
 import type { Project, CreatePaidDto, Paid } from "@/src/core/entities";
 import { usePaidsStore, useProjectsStore } from "@/src/presentation/stores";
+import { useDolarStore } from "@/src/presentation/stores/dolar.store";
 import {
   Modal,
   Button,
@@ -17,6 +18,7 @@ import {
   Box,
   ScrollArea,
   ActionIcon,
+  Switch,
 } from "@mantine/core";
 import { DatePickerInput } from "@mantine/dates";
 import "dayjs/locale/es";
@@ -43,6 +45,7 @@ export function PaymentsModal({
   const { paids, fetchPaidsByProject, createPaid, deletePaid, isLoading } =
     usePaidsStore();
   const { fetchProjectById } = useProjectsStore();
+  const { dolar, fetchDolar } = useDolarStore();
   const [showForm, setShowForm] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedPaid, setSelectedPaid] = useState<Paid | null>(null);
@@ -51,17 +54,24 @@ export function PaymentsModal({
     amount: string;
     date: Date | string | null;
     bill: string;
+    hasUSD: boolean;
+    usdValue: string;
+    amountUSD: string;
   }>({
     amount: "",
     date: null,
     bill: "",
+    hasUSD: false,
+    usdValue: "",
+    amountUSD: "",
   });
 
   useEffect(() => {
     if (project && isOpen) {
       fetchPaidsByProject(project.id);
+      fetchDolar();
     }
-  }, [project, isOpen]);
+  }, [project, isOpen, fetchPaidsByProject, fetchDolar]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +114,9 @@ export function PaymentsModal({
         date: dateString,
         bill: formData.bill,
         projectId: project.id,
+        hasUSD: formData.hasUSD,
+        usdValue: formData.hasUSD && formData.usdValue ? parseFloat(formData.usdValue) : undefined,
+        amountUSD: formData.hasUSD && formData.amountUSD ? parseFloat(formData.amountUSD) : undefined,
       };
 
       console.log("📤 Sending data:", data);
@@ -132,7 +145,7 @@ export function PaymentsModal({
         onPaymentChange();
       }
 
-      setFormData({ amount: "", date: null, bill: "" });
+      setFormData({ amount: "", date: null, bill: "", hasUSD: false, usdValue: "", amountUSD: "" });
       setShowForm(false);
     } catch (error) {
       console.error("❌ Error creating paid:", error);
@@ -293,8 +306,13 @@ export function PaymentsModal({
                   placeholder="100.000"
                   value={formData.amount ? parseFloat(formData.amount) : undefined}
                   onChange={(value) => {
-                    console.log("💰 Amount changed:", value);
-                    setFormData({ ...formData, amount: value?.toString() || "" });
+                    const amountValue = value?.toString() || "";
+                    // Si hasUSD está activo, recalcular el monto USD
+                    let calcUSD = formData.amountUSD;
+                    if (formData.hasUSD && value && formData.usdValue && parseFloat(formData.usdValue) > 0) {
+                      calcUSD = (Number(value) / parseFloat(formData.usdValue)).toFixed(2);
+                    }
+                    setFormData({ ...formData, amount: amountValue, amountUSD: calcUSD });
                   }}
                   required
                   min={0}
@@ -333,6 +351,80 @@ export function PaymentsModal({
                   }
                   styles={inputStyles}
                 />
+
+                {/* Sección USD */}
+                <Paper p="xs" style={{ backgroundColor: formData.hasUSD ? "rgba(34, 197, 94, 0.1)" : "rgba(255, 255, 255, 0.03)", border: formData.hasUSD ? "1px solid #22c55e" : "1px solid #404040", borderRadius: "6px" }}>
+                  <Group justify="space-between" mb={formData.hasUSD ? "xs" : 0}>
+                    <Text size="xs" fw={500} c={formData.hasUSD ? "#22c55e" : "#9ca3af"}>Pago en Dólares</Text>
+                    <Switch
+                      checked={formData.hasUSD}
+                      onChange={(e) => {
+                        const checked = e.currentTarget.checked;
+                        // Al activar, usar el valor actual del dólar
+                        const currentUsdValue = dolar?.venta?.toString() || "";
+                        let calcUSD = "";
+                        if (checked && formData.amount && dolar?.venta) {
+                          calcUSD = (parseFloat(formData.amount) / dolar.venta).toFixed(2);
+                        }
+                        setFormData({
+                          ...formData,
+                          hasUSD: checked,
+                          usdValue: checked ? currentUsdValue : "",
+                          amountUSD: calcUSD
+                        });
+                      }}
+                      size="xs"
+                      color="green"
+                    />
+                  </Group>
+                  {formData.hasUSD && (
+                    <Stack gap="xs">
+                      <NumberInput
+                        label="Valor del Dólar"
+                        placeholder="0.00"
+                        value={formData.usdValue ? parseFloat(formData.usdValue) : undefined}
+                        onChange={(value) => {
+                          const usdVal = value?.toString() || "";
+                          // Recalcular amountUSD con el nuevo valor del dólar
+                          let calcUSD = "";
+                          if (formData.amount && value && Number(value) > 0) {
+                            calcUSD = (parseFloat(formData.amount) / Number(value)).toFixed(2);
+                          }
+                          setFormData({ ...formData, usdValue: usdVal, amountUSD: calcUSD });
+                        }}
+                        min={0}
+                        decimalScale={2}
+                        prefix="$ "
+                        styles={{ 
+                          label: { color: "#9ca3af", marginBottom: "0.25rem", fontSize: "11px" }, 
+                          input: { ...inputStyles.input, borderColor: "#22c55e" } 
+                        }}
+                      />
+                      <NumberInput
+                        label="Monto en USD (editar para auto-calcular ARS)"
+                        placeholder="0.00"
+                        value={formData.amountUSD ? parseFloat(formData.amountUSD) : undefined}
+                        onChange={(value) => {
+                          const usdAmount = value?.toString() || "";
+                          // Calcular monto ARS automáticamente
+                          let calcARS = formData.amount;
+                          if (value && formData.usdValue && parseFloat(formData.usdValue) > 0) {
+                            calcARS = (Number(value) * parseFloat(formData.usdValue)).toFixed(0);
+                          }
+                          setFormData({ ...formData, amountUSD: usdAmount, amount: calcARS });
+                        }}
+                        min={0}
+                        decimalScale={2}
+                        prefix="USD "
+                        styles={{ 
+                          label: { color: "#22c55e", marginBottom: "0.25rem", fontSize: "11px" }, 
+                          input: { ...inputStyles.input, borderColor: "#22c55e" } 
+                        }}
+                      />
+                    </Stack>
+                  )}
+                </Paper>
+
                 <Group gap="xs" justify="flex-end">
                   <Button
                     type="button"
@@ -383,6 +475,16 @@ export function PaymentsModal({
                         <Text fw={600} c="white" size="lg">
                           {formatARS(paid.amount)}
                         </Text>
+                        {paid.hasUSD && paid.amountUSD && (
+                          <Badge
+                            color="green"
+                            variant="light"
+                            leftSection={<DollarSign size={10} />}
+                            size="sm"
+                          >
+                            USD {paid.amountUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </Badge>
+                        )}
                         {paid.bill && (
                           <Badge
                             color="gray"

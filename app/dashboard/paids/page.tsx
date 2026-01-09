@@ -319,11 +319,18 @@ export default function PaidsPage() {
                         <Badge color="green" variant="light" size="lg">
                           {formatARS(paid.amount)}
                         </Badge>
-                        {paid.bill && (
-                          <Badge color="blue" variant="light">
-                            {paid.bill}
-                          </Badge>
-                        )}
+                        <Group gap="xs">
+                          {paid.hasUSD && paid.amountUSD && (
+                            <Badge color="teal" variant="light" leftSection={<DollarSign size={10} />}>
+                              USD {paid.amountUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </Badge>
+                          )}
+                          {paid.bill && (
+                            <Badge color="blue" variant="light">
+                              {paid.bill}
+                            </Badge>
+                          )}
+                        </Group>
                       </Group>
 
                       <Stack gap="xs">
