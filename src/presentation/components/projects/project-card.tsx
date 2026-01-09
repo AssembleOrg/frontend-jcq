@@ -256,6 +256,34 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
                 {formatARS(project.rest)}
               </Text>
             </Group>
+
+            {/* USD Info */}
+            {project.hasUSD && project.usdValue && project.amountUSD && (
+              <Box 
+                p="xs" 
+                style={{ 
+                  backgroundColor: "rgba(34, 197, 94, 0.1)", 
+                  borderRadius: "6px", 
+                  border: "1px solid rgba(34, 197, 94, 0.3)" 
+                }}
+              >
+                <Group justify="space-between" mb={4}>
+                  <Group gap={4}>
+                    <DollarSign size={14} color="#22c55e" />
+                    <Text size="xs" c="#22c55e" fw={500}>Cotización USD</Text>
+                  </Group>
+                  <Text size="xs" c="#9ca3af">
+                    1 USD = ${project.usdValue.toLocaleString('es-AR')}
+                  </Text>
+                </Group>
+                <Group justify="space-between">
+                  <Text size="sm" c="#22c55e">Monto en USD:</Text>
+                  <Text size="sm" fw={700} c="#22c55e">
+                    USD {project.amountUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </Text>
+                </Group>
+              </Box>
+            )}
           </Stack>
 
           {/* Progress Bar */}
