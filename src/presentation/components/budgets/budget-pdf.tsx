@@ -289,11 +289,27 @@ export const BudgetPdfDocument = ({ budget }: { budget: Budget }) => {
           )}
 
           <View style={styles.finalTotal}>
-            <Text style={[styles.finalTotalText, { fontSize: 12 }]}>TOTAL A PAGAR</Text>
+            <Text style={[styles.finalTotalText, { fontSize: 12 }]}>TOTAL (ARS)</Text>
             <Text style={[styles.finalTotalText, { marginLeft: 12 }]}>
                 {formatCurrency(budget.totalAmount)}
             </Text>
           </View>
+
+          {budget.hasUSD && budget.usdValue && budget.totalAmountUSD && (
+            <View style={{ marginTop: 10 }}>
+              <Text style={{ fontSize: 8, color: '#22c55e', marginBottom: 4 }}>
+                Cotización USD: ${budget.usdValue.toLocaleString('es-AR')}
+              </Text>
+              <View style={[styles.finalTotal, { borderTopColor: '#22c55e' }]}>
+                <Text style={[styles.finalTotalText, { fontSize: 12, color: '#22c55e' }]}>
+                  TOTAL (USD)
+                </Text>
+                <Text style={[styles.finalTotalText, { marginLeft: 12, color: '#22c55e' }]}>
+                  USD {budget.totalAmountUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </Text>
+              </View>
+            </View>
+          )}
         </View>
 
         {/* Footer */}

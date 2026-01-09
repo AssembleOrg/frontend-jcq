@@ -2,7 +2,8 @@
 import { useState, useEffect } from "react";
 import { useBudgetsStore } from "@/src/presentation/stores/budget.store"; 
 import { useClientsStore } from "@/src/presentation/stores/clients.store";
-import { useStructuresStore } from "@/src/presentation/stores/structures.store"; 
+import { useStructuresStore } from "@/src/presentation/stores/structures.store";
+import { useDolarStore } from "@/src/presentation/stores/dolar.store"; 
 import { 
   Button, 
   TextInput, 
@@ -36,7 +37,8 @@ export const BudgetForm = () => {
   } = useBudgetsStore();
 
   const { clients, fetchClients } = useClientsStore();
-  const { structuresList, fetchStructures } = useStructuresStore(); 
+  const { structuresList, fetchStructures } = useStructuresStore();
+  const { dolar, fetchDolar } = useDolarStore(); 
 
   const [mounted, setMounted] = useState(false);
   
@@ -50,6 +52,8 @@ export const BudgetForm = () => {
     ivaPercentage: 21,
     hasIibb: false,
     iibbPercentage: 3,
+    hasUSD: false,
+    usdValue: undefined,
     items: []
   });
 
@@ -63,8 +67,9 @@ export const BudgetForm = () => {
   useEffect(() => {
     setMounted(true);
     fetchClients();
-    fetchStructures(); 
-  }, [fetchClients, fetchStructures]);
+    fetchStructures();
+    fetchDolar();
+  }, [fetchClients, fetchStructures, fetchDolar]);
 
   // Efecto para cargar datos si estamos editando
   useEffect(() => {
@@ -82,6 +87,8 @@ export const BudgetForm = () => {
         ivaPercentage: selectedBudget.ivaPercentage,
         hasIibb: selectedBudget.hasIibb,
         iibbPercentage: selectedBudget.iibbPercentage,
+        hasUSD: selectedBudget.hasUSD,
+        usdValue: selectedBudget.usdValue,
         items: selectedBudget.items.map((item: any) => ({
             quantity: item.quantity,
             manualName: item.manualName,
@@ -99,6 +106,8 @@ export const BudgetForm = () => {
         ivaPercentage: 21,
         hasIibb: false,
         iibbPercentage: 3,
+        hasUSD: false,
+        usdValue: undefined,
         items: []
       });
       setIsManualClient(false);
@@ -172,6 +181,8 @@ export const BudgetForm = () => {
         ivaPercentage: Number(formData.ivaPercentage),
         hasIibb: Boolean(formData.hasIibb),
         iibbPercentage: Number(formData.iibbPercentage),
+        hasUSD: Boolean(formData.hasUSD),
+        usdValue: formData.hasUSD ? Number(formData.usdValue) : undefined,
         items: formData.items || []
     };
 
@@ -191,6 +202,9 @@ export const BudgetForm = () => {
   const iva = formData.hasIva ? neto * (Number(formData.ivaPercentage)/100) : 0;
   const iibb = formData.hasIibb ? neto * (Number(formData.iibbPercentage)/100) : 0;
   const total = neto + iva + iibb;
+  const totalUSD = formData.hasUSD && formData.usdValue && formData.usdValue > 0 
+    ? total / formData.usdValue 
+    : null;
 
   const clientOptions = clients.map(c => ({ value: c.id, label: c.fullname }));
   const structureOptions = structuresList?.map(s => ({ value: s.id, label: s.name })) || [];
@@ -452,14 +466,56 @@ export const BudgetForm = () => {
                         </Stack>
                     </Paper>
                 </Group>
+
+                {/* Sección USD */}
+                <Paper p="xs" withBorder bg={formData.hasUSD ? "green.9" : "transparent"} mt="sm">
+                    <Stack gap="xs">
+                        <Group justify="space-between">
+                            <Text size="sm" fw={500}>💵 Cotizar en Dólares</Text>
+                            <Switch 
+                                checked={formData.hasUSD}
+                                onChange={(e) => {
+                                    const checked = e.currentTarget.checked;
+                                    setFormData({
+                                        ...formData, 
+                                        hasUSD: checked,
+                                        usdValue: checked && dolar ? dolar.venta : undefined
+                                    });
+                                }}
+                                disabled={isFormDisabled}
+                                color="green"
+                            />
+                        </Group>
+                        {formData.hasUSD && (
+                            <NumberInput 
+                                label="Valor del Dólar"
+                                size="xs"
+                                prefix="$ "
+                                decimalScale={2}
+                                value={formData.usdValue}
+                                onChange={(val) => setFormData({...formData, usdValue: Number(val)})}
+                                disabled={isFormDisabled}
+                                min={0}
+                            />
+                        )}
+                    </Stack>
+                </Paper>
             </Stack>
         </Paper>
 
         <Paper p="md" bg="blue.6" radius="md" mt="md">
-            <Group justify="space-between">
-                <Text size="lg" fw={700} c="white">TOTAL FINAL</Text>
-                <Text size="xl" fw={900} c="white">{formatCurrency(total)}</Text>
-            </Group>
+            <Stack gap="xs">
+                <Group justify="space-between">
+                    <Text size="lg" fw={700} c="white">TOTAL FINAL (ARS)</Text>
+                    <Text size="xl" fw={900} c="white">{formatCurrency(total)}</Text>
+                </Group>
+                {formData.hasUSD && totalUSD !== null && (
+                    <Group justify="space-between">
+                        <Text size="md" fw={600} c="white">TOTAL EN USD</Text>
+                        <Text size="lg" fw={800} c="lime.3">USD {totalUSD.toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</Text>
+                    </Group>
+                )}
+            </Stack>
         </Paper>
 
         <Group grow>

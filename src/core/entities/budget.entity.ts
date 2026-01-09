@@ -29,6 +29,10 @@ export interface Budget {
   hasIibb: boolean;
   iibbPercentage: number;
   iibbValue: number;
+
+  hasUSD: boolean;
+  usdValue?: number;
+  totalAmountUSD?: number;
   
   items: BudgetItem[];
   
@@ -53,6 +57,9 @@ export interface CreateBudgetDto {
   ivaPercentage: number;
   hasIibb: boolean;
   iibbPercentage: number;
+
+  hasUSD: boolean;
+  usdValue?: number;
   
   netAmount: number;
   
