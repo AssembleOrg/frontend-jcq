@@ -5,6 +5,7 @@ import type {
   Project,
 } from "@/src/core/entities";
 import { useProjectsStore, useClientsStore, useBudgetsStore } from "@/src/presentation/stores";
+import { useDolarStore } from "@/src/presentation/stores/dolar.store";
 import {
   Modal,
   Button,
@@ -18,6 +19,7 @@ import {
   Box,
   Text,
   Paper,
+  Switch,
 } from "@mantine/core";
 import { ProjectStructuresSelector, SelectedItem } from "./project-structure-selector";
 import { useCollaboratorsStore } from "@/src/presentation/stores/collaborators.store";
@@ -40,6 +42,7 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
   const { createProject, updateProject, isLoading } = useProjectsStore();
   const { clients, fetchAllClients } = useClientsStore();
   const { collaboratorSelector, fetchCollaboratorSelector } = useCollaboratorsStore();
+  const { dolar, fetchDolar } = useDolarStore();
   
   // Hook para presupuestos
   const { budgetsList, fetchBudgets } = useBudgetsStore();
@@ -50,9 +53,10 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     if (isOpen) {
       fetchAllClients();
       fetchCollaboratorSelector(); 
-      fetchBudgets(); 
+      fetchBudgets();
+      fetchDolar();
     }
-  }, [isOpen, fetchAllClients, fetchCollaboratorSelector, fetchBudgets]);
+  }, [isOpen, fetchAllClients, fetchCollaboratorSelector, fetchBudgets, fetchDolar]);
 
   // Estado del formulario actualizado para soportar array de colaboradores
   const [formData, setFormData] = useState({
@@ -65,6 +69,8 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
     event: "",
     dateInit: "",
     dateEnd: "",
+    hasUSD: false,
+    usdValue: "" as string | number,
     // Array para múltiples colaboradores
     collaborators: [] as CollaboratorRow[], 
   });
@@ -84,6 +90,8 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         event: project.event || "",
         dateInit: project.dateInit ? new Date(project.dateInit).toISOString().split('T')[0] : "",
         dateEnd: project.dateEnd ? new Date(project.dateEnd).toISOString().split('T')[0] : "",
+        hasUSD: project.hasUSD || false,
+        usdValue: project.usdValue || "",
         // Mapeamos los colaboradores existentes al formato del formulario
         collaborators: project.collaborators 
           ? project.collaborators.map(c => ({
@@ -126,6 +134,8 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         event: "",
         dateInit: "",
         dateEnd: "",
+        hasUSD: false,
+        usdValue: "",
         collaborators: [],
       });
       setSelectedStructures([]);
@@ -149,6 +159,9 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
       event: budget.manualClientName 
         ? `Evento - ${budget.manualClientName}` 
         : (budget.client?.fullname ? `Evento - ${budget.client.fullname}` : prev.event),
+      // Importar datos de USD desde el presupuesto
+      hasUSD: budget.hasUSD || false,
+      usdValue: budget.usdValue || "",
     }));
   };
 
@@ -215,6 +228,10 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
         structureId,
         quantity,
       })),
+
+      // Campos USD
+      hasUSD: formData.hasUSD,
+      usdValue: formData.hasUSD && formData.usdValue ? Number(formData.usdValue) : undefined,
     };
 
     try {
@@ -329,6 +346,49 @@ export function ProjectForm({ isOpen, onClose, project }: ProjectFormProps) {
               />
             </Grid.Col>
           </Grid>
+
+          {/* Sección USD */}
+          <Paper p="sm" style={{ backgroundColor: formData.hasUSD ? "rgba(34, 197, 94, 0.1)" : "rgba(255, 255, 255, 0.03)", border: formData.hasUSD ? "1px solid #22c55e" : "1px solid #404040", borderRadius: "8px" }}>
+            <Group justify="space-between" mb={formData.hasUSD ? "xs" : 0}>
+              <Text size="sm" fw={500} c={formData.hasUSD ? "#22c55e" : "#e5e7eb"}>Cotizar en Dólares</Text>
+              <Switch
+                checked={formData.hasUSD}
+                onChange={(e) => {
+                  const checked = e.currentTarget.checked;
+                  setFormData({
+                    ...formData,
+                    hasUSD: checked,
+                    usdValue: checked && dolar ? dolar.venta : ""
+                  });
+                }}
+                color="green"
+              />
+            </Group>
+            {formData.hasUSD && (
+              <Grid>
+                <Grid.Col span={6}>
+                  <NumberInput
+                    label="Valor del Dólar"
+                    placeholder="0.00"
+                    value={formData.usdValue}
+                    onChange={(val) => setFormData({ ...formData, usdValue: val })}
+                    min={0}
+                    prefix="$ "
+                    decimalScale={2}
+                    styles={{ label: { ...labelStyle, fontSize: '12px' }, input: { ...inputStyle, borderColor: '#22c55e' } }}
+                  />
+                </Grid.Col>
+                <Grid.Col span={6}>
+                  <Text size="xs" c="dimmed" mb={4}>Monto en USD</Text>
+                  <Text size="lg" fw={700} c="#22c55e">
+                    USD {formData.amount && formData.usdValue && Number(formData.usdValue) > 0
+                      ? (Number(formData.amount) / Number(formData.usdValue)).toLocaleString('es-AR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+                      : '0.00'}
+                  </Text>
+                </Grid.Col>
+              </Grid>
+            )}
+          </Paper>
 
           <Divider my="xs" color="#2d2d2d" label="Colaboradores Externos" labelPosition="center" />
 

@@ -51,6 +51,9 @@ export interface Project {
   collaborators: ProjectCollaborator[];
   dateInit: string;
   dateEnd: string;
+  hasUSD: boolean;
+  usdValue?: number;
+  amountUSD?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -65,6 +68,8 @@ export interface CreateProjectDto {
   event: string;
   dateInit: string;
   dateEnd: string;
+  hasUSD?: boolean;
+  usdValue?: number;
 }
 
 export interface UpdateProjectDto {
@@ -77,6 +82,8 @@ export interface UpdateProjectDto {
   event?: string;
   dateInit?: string;
   dateEnd?: string;
+  hasUSD?: boolean;
+  usdValue?: number;
 }
 
 export interface UpdateProjectStatusDto {
