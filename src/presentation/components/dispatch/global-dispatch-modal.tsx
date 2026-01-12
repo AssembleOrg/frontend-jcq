@@ -260,7 +260,7 @@ export const GlobalDispatchModal = ({ onClose }: GlobalDispatchModalProps) => {
                                     <Table.Td>
                                         <PDFDownloadLink
                                             document={<DispatchPdf dispatch={dispatch} />}
-                                            fileName={`Remito_${dispatch.firstName}${dispatch.lastName}_${new Date(dispatch.createdAt).toLocaleDateString().replace(/\//g, '-')}.pdf`}
+                                            fileName={`Remito ${String(dispatch.dispatchNumber || 0).padStart(4, '0')}.pdf`}
                                         >
                                             {({ loading }) => (
                                                 <Tooltip label="Descargar PDF" withArrow position="left">
