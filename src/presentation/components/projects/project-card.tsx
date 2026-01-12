@@ -13,7 +13,8 @@ import {
   Package, 
   DollarSign,
   ChevronDown,
-  ChevronUp, 
+  ChevronUp,
+  Truck,
 } from "lucide-react";
 import type { Project } from "@/src/core/entities";
 import { useProjectsStore } from "@/src/presentation/stores";
@@ -38,14 +39,17 @@ import {
   generateBudgetPDF,
 } from "@/src/presentation/utils";
 import { ProjectForm } from "./project-form";
+import { DispatchModal } from "./dispatch-modal";
 import {
   ConfirmationModal,
   DeleteConfirmationModal,
 } from "@/src/presentation/components/common";
+import { Modal } from "@mantine/core";
 
 interface ProjectCardProps {
   project: Project;
   onViewPayments: (project: Project) => void;
+  onRefresh?: () => void;
 }
 
 const statusColors = {
@@ -64,7 +68,7 @@ const statusLabels = {
   DELETED: "Eliminado",
 };
 
-export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
+export function ProjectCard({ project, onViewPayments, onRefresh }: ProjectCardProps) {
   const { deleteProject, updateProjectStatus } = useProjectsStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -73,6 +77,7 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
   const [showActivateModal, setShowActivateModal] = useState(false);
   const [showPaymentWarning, setShowPaymentWarning] = useState(false);
   const [showCollaborators, setShowCollaborators] = useState(false);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
 
   const handleDeleteConfirm = async () => {
     setIsDeleting(true);
@@ -391,6 +396,30 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
               </>
             )}
 
+            {/* Dispatch Button - Only for ACTIVE and IN_PROCESS */}
+            {(project.status === "ACTIVE" || project.status === "IN_PROCESS") && (() => {
+              // Check if all structures are fully dispatched
+              const structures = project.structures || [];
+              const allDispatched = structures.length > 0 && structures.every(
+                item => (item.dispatchedQuantity || 0) >= item.quantity
+              );
+              const hasNoStructures = !project.structures || project.structures.length === 0;
+              
+              return (
+                <Button
+                  variant="light"
+                  color={allDispatched ? "gray" : hasNoStructures ? "gray" : "cyan"}
+                  size="sm"
+                  leftSection={<Truck size={16} />}
+                  onClick={() => setShowDispatchModal(true)}
+                  fullWidth
+                  disabled={hasNoStructures}
+                >
+                  {allDispatched ? "Ver Despachos" : hasNoStructures ? "Sin estructuras" : "Realizar Despacho"}
+                </Button>
+              );
+            })()}
+
             <Group gap="xs">
               <Button
                 variant="light"
@@ -464,6 +493,30 @@ export function ProjectCard({ project, onViewPayments }: ProjectCardProps) {
         confirmText="Entendido"
         confirmColor="orange"
       />
+
+      {/* Dispatch Modal */}
+      <Modal
+        opened={showDispatchModal}
+        onClose={() => setShowDispatchModal(false)}
+        title="Crear Despacho"
+        size="xl"
+        centered
+        styles={{
+          header: { backgroundColor: '#1a1a1a', borderBottom: '1px solid #2d2d2d' },
+          title: { color: 'white', fontWeight: 700 },
+          body: { backgroundColor: '#0f0f0f', padding: '1.5rem' },
+          close: { color: 'white' }
+        }}
+      >
+        <DispatchModal
+          project={project}
+          onClose={() => setShowDispatchModal(false)}
+          onSuccess={() => {
+            setShowDispatchModal(false);
+            if (onRefresh) onRefresh();
+          }}
+        />
+      </Modal>
     </>
   );
 }

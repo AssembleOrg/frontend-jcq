@@ -5,7 +5,8 @@ import { useSearchParams } from "next/navigation"; // Necesaria para leer la URL
 import {
   Plus,
   Filter,
-  X
+  X,
+  Truck
 } from "lucide-react";
 import { Header } from "@/src/presentation/components/layout/header";
 import { useProjectsStore } from "@/src/presentation/stores";
@@ -21,10 +22,12 @@ import {
   NumberInput,
   Collapse,
   Stack,
+  Modal,
 } from "@mantine/core";
 import { ProjectCard } from "@/src/presentation/components/projects/project-card";
 import { ProjectForm } from "@/src/presentation/components/projects/project-form";
 import { PaymentsModal } from "@/src/presentation/components/projects/payments-modal";
+import { GlobalDispatchModal } from "@/src/presentation/components/dispatch/global-dispatch-modal";
 import { PaginationControls } from "@/src/presentation/components/common/pagination-controls";
 import type {
   Project,
@@ -48,6 +51,7 @@ function ProjectsContent() {
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showDispatchModal, setShowDispatchModal] = useState(false);
 
   const [filters, setFilters] = useState<ProjectFilters>({
     page: 1,
@@ -100,6 +104,12 @@ function ProjectsContent() {
     }
   }, [isPaymentsOpen]);
 
+  // Also refetch when global dispatch modal closes, as quantities might have changed?
+  // Well, global dispatch modal usually affects quantities or just viewing?
+  // If we edit or delete, we might want to refresh projects if they were fetched?
+  // But projects list doesn't show dispatch details directly, only status.
+  // We can add a refresh if needed, but for now just close.
+
   const handleViewPayments = (project: Project) => {
     setSelectedProject(project);
     setIsPaymentsOpen(true);
@@ -136,13 +146,23 @@ function ProjectsContent() {
         title="Proyectos"
         description="Gestión de proyectos y presupuestos"
         action={
-          <Button
-            color="orange"
-            leftSection={<Plus size={16} />}
-            onClick={() => setIsFormOpen(true)}
-          >
-            Nuevo Proyecto
-          </Button>
+            <Group gap="sm">
+                <Button
+                    variant="light"
+                    color="cyan"
+                    leftSection={<Truck size={16} />}
+                    onClick={() => setShowDispatchModal(true)}
+                >
+                    Despachos
+                </Button>
+                <Button
+                    color="orange"
+                    leftSection={<Plus size={16} />}
+                    onClick={() => setIsFormOpen(true)}
+                >
+                    Nuevo Proyecto
+                </Button>
+            </Group>
         }
       />
 
@@ -408,6 +428,16 @@ function ProjectsContent() {
                     <ProjectCard
                       project={project}
                       onViewPayments={handleViewPayments}
+                      onRefresh={() => {
+                        // Refetch projects with current filters
+                        const cleanFilters: ProjectFilters = {};
+                        Object.entries(filters).forEach(([key, value]) => {
+                          if (value !== undefined && value !== "" && value !== null) {
+                            cleanFilters[key as keyof ProjectFilters] = value as never;
+                          }
+                        });
+                        fetchProjects(cleanFilters);
+                      }}
                     />
                   </Grid.Col>
                 );
@@ -446,6 +476,22 @@ function ProjectsContent() {
           fetchProjects(cleanFilters);
         }}
       />
+      {/* Global Dispatch Modal */}
+      <Modal
+        opened={showDispatchModal}
+        onClose={() => setShowDispatchModal(false)}
+        title="Todos los Despachos"
+        size="xl"
+        centered
+        styles={{
+          header: { backgroundColor: '#1a1a1a', borderBottom: '1px solid #2d2d2d' },
+          title: { color: 'white', fontWeight: 700 },
+          body: { backgroundColor: '#0f0f0f', padding: '1.5rem' },
+          close: { color: 'white' }
+        }}
+      >
+        <GlobalDispatchModal onClose={() => setShowDispatchModal(false)} />
+      </Modal>
     </Box>
   );
 }
