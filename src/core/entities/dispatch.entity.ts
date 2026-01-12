@@ -11,6 +11,7 @@ export interface DispatchItem {
 
 export interface Dispatch {
     id: string;
+    dispatchNumber: number;
     projectId: string;
     project: Project;
     firstName: string;

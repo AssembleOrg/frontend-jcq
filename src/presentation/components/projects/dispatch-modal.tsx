@@ -494,7 +494,7 @@ export const DispatchModal = ({ project, onClose, onSuccess }: DispatchModalProp
 
                                 <PDFDownloadLink
                                     document={<DispatchPdf dispatch={lastSavedDispatch} />}
-                                    fileName={`Remito_${project.client?.fullname}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`}
+                                    fileName={`Remito ${String(lastSavedDispatch.dispatchNumber || 0).padStart(4, '0')}.pdf`}
                                     style={{ textDecoration: 'none' }}
                                 >
                                     {({ loading }) => (
@@ -584,7 +584,7 @@ export const DispatchModal = ({ project, onClose, onSuccess }: DispatchModalProp
                                                     </Tooltip>
                                                     <PDFDownloadLink
                                                         document={<DispatchPdf dispatch={dispatch} />}
-                                                        fileName={`Remito_${dispatch.firstName}${dispatch.lastName}.pdf`}
+                                                        fileName={`Remito ${String(dispatch.dispatchNumber || 0).padStart(4, '0')}.pdf`}
                                                     >
                                                         {({ loading }) => (
                                                             <Tooltip label="Descargar PDF" withArrow position="top">

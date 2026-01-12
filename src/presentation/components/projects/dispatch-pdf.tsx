@@ -84,11 +84,11 @@ export const DispatchPdf = ({ dispatch }: DispatchPdfProps) => {
                         <Image src="/jcq.png" style={{ width: 90, marginRight: 12 }} />
                         <View>
                             <Text style={styles.companyName}>JCQ ANDAMIOS</Text>
-                            <Text style={{ fontSize: 9, color: COLORS.gray }}>Remito de Despacho</Text>
+                            <Text style={{ fontSize: 9, color: COLORS.gray }}>Comprobante de despacho</Text>
                         </View>
                     </View>
                     <View style={{ alignItems: 'flex-end' }}>
-                        <Text style={styles.documentTitle}>REMITO</Text>
+                        <Text style={styles.documentTitle}>REMITO {String(dispatch.dispatchNumber || 0).padStart(4, '0')}</Text>
                         <Text style={{ fontSize: 10, marginTop: 4 }}>
                             Fecha: {new Date(dispatch.createdAt).toLocaleDateString('es-AR')}
                         </Text>
@@ -174,7 +174,7 @@ export const DispatchPdf = ({ dispatch }: DispatchPdfProps) => {
 
                 {/* Footer */}
                 <Text style={styles.footer}>
-                    Documento generado automáticamente por el sistema de gestión de JCQ Andamios.
+                    Comprobante de despacho - Documento generado automáticamente por el sistema de gestión de JCQ Andamios.
                 </Text>
 
             </Page>
