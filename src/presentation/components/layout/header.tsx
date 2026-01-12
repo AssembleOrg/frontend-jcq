@@ -19,7 +19,7 @@ import {
   ThemeIcon,
 } from "@mantine/core";
 import { useDolarStore } from "@/src/presentation/stores/dolar.store";
-import { useProjectsStore } from "@/src/presentation/stores/projects.store"; 
+import { useProjectsStore } from "@/src/presentation/stores/projects.store";
 
 interface HeaderProps {
   title: string;

@@ -105,9 +105,11 @@ export interface ProjectFilters {
 
 export interface ProjectStructure {
     id: string;             
-    quantity: number;       
+    quantity: number;
+    dispatchedQuantity: number;       
     structureId: string;
-    structure: Structure;   
+    structure: Structure;
+    structureName?: string;
 }
 
 export interface ProjectStructureDto {

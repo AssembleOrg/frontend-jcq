@@ -30,6 +30,7 @@ interface ProjectsState {
   deleteProject: (id: string) => Promise<void>;
   setSelectedProject: (project: Project | null) => void;
   clearError: () => void;
+  updateProjectDispatchedQuantities: (projectId: string, items: { projectItemId: string; quantity: number }[]) => void;
 }
 
 export const useProjectsStore = create<ProjectsState>((set, get) => ({
@@ -208,4 +209,36 @@ export const useProjectsStore = create<ProjectsState>((set, get) => ({
   setSelectedProject: (project: Project | null) =>
     set({ selectedProject: project }),
   clearError: () => set({ error: null }),
+
+  updateProjectDispatchedQuantities: (projectId: string, items: { projectItemId: string; quantity: number }[]) => {
+      set((state) => {
+          const updateProject = (p: Project) => {
+              if (p.id !== projectId) return p;
+              
+              // Clone structures to avoid mutation
+              const updatedStructures = p.structures?.map(s => {
+                   const itemUpdate = items.find(i => i.projectItemId === s.id);
+                   if (itemUpdate) {
+                       return {
+                           ...s,
+                           dispatchedQuantity: (s.dispatchedQuantity || 0) + itemUpdate.quantity
+                       };
+                   }
+                   return s;
+              });
+
+              return { ...p, structures: updatedStructures };
+          };
+
+          const newProjects = state.projects.map(updateProject);
+          const newSelected = state.selectedProject?.id === projectId 
+                ? updateProject(state.selectedProject) 
+                : state.selectedProject;
+
+          return {
+              projects: newProjects,
+              selectedProject: newSelected
+          };
+      });
+  }
 }));
