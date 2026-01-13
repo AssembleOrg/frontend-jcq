@@ -22,7 +22,7 @@ import {
   LoadingOverlay
 } from "@mantine/core";
 import { Plus, Trash, FileText, X, Download, CheckCircle, AlertCircle } from "lucide-react";
-import { CreateBudgetDto, CreateBudgetItemDto, Budget } from "@/src/core/entities";
+import { CreateBudgetDto, CreateBudgetItemDto, Budget, CreateBudgetDescriptionItemDto } from "@/src/core/entities";
 import { pdf } from "@react-pdf/renderer";
 import { BudgetPdfDocument } from "./budget-pdf";
 import { formatCurrency } from "@/src/presentation/utils/format-currency";
@@ -54,7 +54,8 @@ export const BudgetForm = () => {
     iibbPercentage: 3,
     hasUSD: false,
     usdValue: undefined,
-    items: []
+    items: [],
+    descriptionItems: []
   });
 
   const [newItem, setNewItem] = useState<{
@@ -62,6 +63,14 @@ export const BudgetForm = () => {
     desc: string; 
     structureId?: string 
   }>({ quantity: 1, desc: '', structureId: undefined });
+
+  // State for Description Items (Manual Services/Other)
+  const [newDescItem, setNewDescItem] = useState<{
+    title: string;
+    quantity: number;
+    price: number | '';
+    unit: string;
+  }>({ title: '', quantity: 1, price: '', unit: '' });
 
   // Efecto para marcar que ya estamos en el cliente
   useEffect(() => {
@@ -93,7 +102,13 @@ export const BudgetForm = () => {
             quantity: item.quantity,
             manualName: item.manualName,
             structureId: item.structureId
-        }))
+        })),
+        descriptionItems: selectedBudget.descriptionItems?.map((item: any) => ({
+            title: item.title,
+            quantity: item.quantity,
+            price: item.price,
+            unit: item.unit
+        })) || []
       });
     }
   }, [selectedBudget]);
@@ -108,9 +123,11 @@ export const BudgetForm = () => {
         iibbPercentage: 3,
         hasUSD: false,
         usdValue: undefined,
-        items: []
+        items: [],
+        descriptionItems: []
       });
       setIsManualClient(false);
+      setNewDescItem({ title: '', quantity: 1, price: '', unit: '' });
       setSelectedBudget(null); 
       setLastSavedBudget(null); 
   };
@@ -183,7 +200,8 @@ export const BudgetForm = () => {
         iibbPercentage: Number(formData.iibbPercentage),
         hasUSD: Boolean(formData.hasUSD),
         usdValue: formData.hasUSD ? Number(formData.usdValue) : undefined,
-        items: formData.items || []
+        items: formData.items || [],
+        descriptionItems: formData.descriptionItems || []
     };
 
     let result;
@@ -197,6 +215,47 @@ export const BudgetForm = () => {
         setLastSavedBudget(result);
     }
   };
+
+
+
+  const calculateDescItemsTotal = () => {
+    return formData.descriptionItems?.reduce((acc, item) => {
+        return acc + (item.price * (item.quantity || 1));
+    }, 0) || 0;
+  };
+
+  // Handlers for Description Items
+  const handleAddDescItem = () => {
+    if (!newDescItem.title || !newDescItem.price) return;
+
+    const item: CreateBudgetDescriptionItemDto = {
+        title: newDescItem.title,
+        quantity: newDescItem.quantity,
+        price: Number(newDescItem.price),
+        unit: newDescItem.unit || undefined
+    };
+
+    setFormData(prev => ({
+        ...prev,
+        descriptionItems: [...(prev.descriptionItems || []), item],
+        netAmount: Number(prev.netAmount) + (item.price * (item.quantity || 1)) // Sumar al neto
+    }));
+
+    setNewDescItem({ title: '', quantity: 1, price: '', unit: '' });
+  };
+
+  const handleRemoveDescItem = (index: number) => {
+    const itemToRemove = formData.descriptionItems?.[index];
+    if (!itemToRemove) return;
+
+    setFormData(prev => ({
+        ...prev,
+        descriptionItems: prev.descriptionItems?.filter((_, i) => i !== index),
+        netAmount: Math.max(0, Number(prev.netAmount) - (itemToRemove.price * (itemToRemove.quantity || 1))) // Restar del neto
+    }));
+  };
+
+
 
   const neto = Number(formData.netAmount || 0);
   const iva = formData.hasIva ? neto * (Number(formData.ivaPercentage)/100) : 0;
@@ -395,6 +454,105 @@ export const BudgetForm = () => {
                         >
                             <Trash size={14} />
                         </ActionIcon>
+                    </Group>
+                ))}
+            </Stack>
+
+        </Paper>
+
+        <Divider my="sm" label="Servicios / Otros Detalles" labelPosition="center" />
+
+        <Paper withBorder p="md" radius="md" bg="dark.7">
+            <Text size="sm" fw={700} mb="sm">Agregar Servicios o Detalles Adicionales</Text>
+            
+            <Grid align="flex-end" mb="xs">
+                 <Grid.Col span={2}>
+                    <NumberInput
+                        label="Cant."
+                        min={1}
+                        value={newDescItem.quantity}
+                        onChange={(val) => setNewDescItem({ ...newDescItem, quantity: Number(val) })}
+                        disabled={isFormDisabled}
+                    />
+                </Grid.Col>
+                <Grid.Col span={5}>
+                    <TextInput
+                        label="Descripción / Servicio"
+                        placeholder="Ej: Flete / Mano de Obra"
+                        value={newDescItem.title}
+                        onChange={(e) => setNewDescItem({ ...newDescItem, title: e.target.value })}
+                        disabled={isFormDisabled}
+                    />
+                </Grid.Col>
+                <Grid.Col span={2}>
+                    <TextInput 
+                        label="Unidad"
+                        placeholder="Ej: Global / Hora"
+                        value={newDescItem.unit}
+                        onChange={(e) => setNewDescItem({...newDescItem, unit: e.target.value})}
+                        disabled={isFormDisabled}
+                    />
+                </Grid.Col>
+                <Grid.Col span={2}>
+                    <NumberInput
+                        label="Precio Unit."
+                        prefix="$"
+                        min={0}
+                        value={newDescItem.price}
+                        onChange={(val) => setNewDescItem({ ...newDescItem, price: val === '' ? '' : Number(val) })}
+                        disabled={isFormDisabled}
+                    />
+                </Grid.Col>
+                <Grid.Col span={1}>
+                     <Button
+                        onClick={handleAddDescItem}
+                        variant="filled"
+                        color="grape"
+                        fullWidth
+                        p={0}
+                        disabled={isFormDisabled || !newDescItem.title || !newDescItem.price}
+                    >
+                        <Plus size={20} />
+                    </Button>
+                </Grid.Col>
+            </Grid>
+
+            <Stack gap="xs">
+                 {formData.descriptionItems?.length === 0 && (
+                    <Text size="sm" c="dimmed" ta="center" py="sm">No hay servicios agregados</Text>
+                )}
+
+                {formData.descriptionItems?.map((it, idx) => (
+                    <Group
+                        key={idx}
+                        justify="space-between"
+                        p="xs"
+                        style={{
+                            borderRadius: 8,
+                            backgroundColor: "var(--mantine-color-dark-6)",
+                            border: "1px solid var(--mantine-color-grape-9)",
+                        }}
+                    >
+                         <Group gap="xs">
+                            <Text size="sm" fw={700} c="grape.2">{it.quantity}x</Text>
+                            <Text size="sm" c="white">{it.title}</Text>
+                            {it.unit && <Text size="xs" c="dimmed">({it.unit})</Text>}
+                         </Group>
+
+                         <Group gap="md">
+                            <Text size="sm" fw={700}>
+                                {formatCurrency(it.price * (it.quantity || 1))}
+                            </Text>
+                            <ActionIcon
+                                color="red"
+                                variant="light"
+                                size="sm"
+                                onClick={() => handleRemoveDescItem(idx)}
+                                disabled={isFormDisabled}
+                            >
+                                <Trash size={14} />
+                            </ActionIcon>
+                         </Group>
                     </Group>
                 ))}
             </Stack>
