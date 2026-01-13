@@ -9,6 +9,14 @@ export interface BudgetItem {
   structure?: Structure;
 }
 
+export interface BudgetDescriptionItem {
+  id: string;
+  title: string;
+  quantity: number;
+  price: number;
+  unit?: string;
+}
+
 export interface Budget {
   id: string;
   date: string; 
@@ -35,6 +43,7 @@ export interface Budget {
   totalAmountUSD?: number;
   
   items: BudgetItem[];
+  descriptionItems?: BudgetDescriptionItem[];
   
   createdAt: string;
   updatedAt: string;
@@ -45,6 +54,13 @@ export interface CreateBudgetItemDto {
   quantity: number;
   structureId?: string; // Opcional si es manual
   manualName?: string;  // Opcional si es estructura
+}
+
+export interface CreateBudgetDescriptionItemDto {
+  title: string;
+  quantity?: number;
+  price: number;
+  unit?: string;
 }
 
 export interface CreateBudgetDto {
@@ -64,6 +80,7 @@ export interface CreateBudgetDto {
   netAmount: number;
   
   items: CreateBudgetItemDto[];
+  descriptionItems?: CreateBudgetDescriptionItemDto[];
 }
 
 export interface UpdateBudgetDto extends Partial<CreateBudgetDto> {}

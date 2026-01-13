@@ -267,6 +267,31 @@ export const BudgetPdfDocument = ({ budget }: { budget: Budget }) => {
           ))}
         </View>
 
+        {/* Tabla de Items de Descripción (Servicios/Adicionales) */}
+        {budget.descriptionItems && budget.descriptionItems.length > 0 && (
+          <View style={[styles.table, { marginTop: 0 }]}>
+             <View style={[styles.tableHeader, { backgroundColor: COLORS.dark }]}>
+                <Text style={[styles.tableHeaderCell, styles.colIndex]}>#</Text>
+                <Text style={[styles.tableHeaderCell, styles.colQty]}>CANT</Text>
+                <Text style={[styles.tableHeaderCell, styles.colDesc]}>SERVICIOS / DETALLES ADICIONALES</Text>
+                <Text style={[styles.tableHeaderCell, { width: '15%', textAlign: 'right', color: 'white' }]}>TOTAL</Text>
+            </View>
+
+             {budget.descriptionItems.map((item, index) => (
+                <View key={`desc-${index}`} style={styles.tableRow}>
+                  <Text style={[styles.tableCell, styles.colIndex]}>{index + 1}</Text>
+                  <Text style={[styles.tableCell, styles.colQty]}>{item.quantity}</Text>
+                   <Text style={[styles.tableCell, styles.colDesc]}>
+                    {item.title} {item.unit ? `(${item.unit})` : ''}
+                  </Text>
+                   <Text style={[styles.tableCell, { width: '15%', textAlign: 'right', fontSize: 10 }]}>
+                      {formatCurrency(item.price * (item.quantity))}
+                   </Text>
+                </View>
+              ))}
+          </View>
+        )}
+
         {/* Sección de Totales */}
         <View style={styles.totalContainer}>
           <View style={styles.totalRow}>
