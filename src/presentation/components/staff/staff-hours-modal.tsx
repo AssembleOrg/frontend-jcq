@@ -152,6 +152,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
       if (editingId && editingDate) {
          recordDateStr = editingDate;
       } else {
+         // Para el registro en la DB, seguimos usando el Lunes como identificador de la semana
          const currentDay = referenceDate.getDay(); 
          const diffToMonday = referenceDate.getDate() - currentDay + (currentDay === 0 ? -6 : 1); 
          const mondayDate = new Date(referenceDate);
@@ -191,7 +192,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
       
       const savedPdfData: PdfData = {
         employeeName: `${staff.firstName} ${staff.lastName}`,
-        date: new Date(recordDateStr).toLocaleDateString(),
+        date: referenceDate.toLocaleDateString(), // En el pdf se muestra la fecha de hoy mas no de la semana que inicio
         amountsDetail: { 
             lunes:     { normal: Number(hours.lunes || 0), extra: Number(hours.lunesExtra || 0) },
             martes:    { normal: Number(hours.martes || 0), extra: Number(hours.martesExtra || 0) },
@@ -536,7 +537,8 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                 document={
                                     <WorkRecordPdf data={{
                                         employeeName: `${staff?.firstName} ${staff?.lastName}`,
-                                        date: new Date(record.startDate || record.date).toLocaleDateString(),
+                                        // Para registros viejos, usar la fecha en que se crearon
+                                        date: new Date(record.createdAt || record.date).toLocaleDateString(),
                                         amountsDetail: {
                                             lunes:     { normal: record.hoursMonday || 0, extra: record.hoursMondayExtra || 0 },
                                             martes:    { normal: record.hoursTuesday || 0, extra: record.hoursTuesdayExtra || 0 },
