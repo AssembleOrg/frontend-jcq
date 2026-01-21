@@ -85,6 +85,7 @@ export interface PdfData {
     sabado: { normal: number; extra: number };
     domingo: { normal: number; extra: number };
   };
+  hoursFridayLastWeek?: number;
   lastWeekPayment: number;
   grossTotal: number;
   advance: number;
@@ -153,6 +154,13 @@ export const WorkRecordPdf = ({ data }: { data: PdfData }) => {
             </View>
 
             <View style={styles.totalContainer}>
+                {(data.hoursFridayLastWeek || 0) > 0 && (
+                    <View style={styles.totalRow}>
+                        <Text style={{ fontSize: 12, color: COLORS.gray }}>Viernes Semana Anterior:</Text>
+                        <Text style={{ fontSize: 12, fontWeight: 'bold' }}>${(data.hoursFridayLastWeek || 0).toLocaleString('es-AR')}</Text>
+                    </View>
+                )}
+
                 {data.lastWeekPayment > 0 && (
                     <View style={styles.totalRow}>
                         <Text style={{ fontSize: 12, color: COLORS.gray }}>Pago Semana Anterior:</Text>
