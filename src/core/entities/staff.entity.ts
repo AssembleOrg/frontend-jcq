@@ -55,6 +55,7 @@ export interface CreateWorkRecordDto {
   hoursSaturdayExtra: number; 
   hoursSundayExtra: number;
   hoursLastWeek: number;
+  hoursFridayLastWeek?: number;
   startDate: string; 
 }
 

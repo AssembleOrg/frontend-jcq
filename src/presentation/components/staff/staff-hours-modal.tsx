@@ -52,7 +52,8 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
 
   const [hours, setHours] = useState<{ [key: string]: number | string }>({
     lunes: "", martes: "", miercoles: "", jueves: "", viernes: "", sabado: "", domingo:"",
-    lunesExtra:"", martesExtra:"", miercolesExtra:"", juevesExtra:"", viernesExtra:"", sabadoExtra:"", domingoExtra:"",
+    viernesUltSemana: "", 
+    sabadoExtra:"", domingoExtra:"", lunesExtra:"", martesExtra:"", miercolesExtra:"", juevesExtra:"", viernesExtra:"",
     ultSemana:"",
   });
 
@@ -103,7 +104,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
     setEditingDate(null);
     setHours({ 
         lunes: "", martes: "", miercoles: "", jueves: "", viernes: "", sabado: "", domingo: "",
-        lunesExtra: "", martesExtra: "", miercolesExtra: "", juevesExtra: "", viernesExtra: "", sabadoExtra: "", domingoExtra: "",
+        viernesUltSemana: "", sabadoExtra: "", domingoExtra: "", lunesExtra: "", martesExtra: "", miercolesExtra: "", juevesExtra: "", viernesExtra: "",
         ultSemana: ""
     });
     setAdvance("");
@@ -129,6 +130,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
       viernesExtra: record.hoursFridayExtra || "",
       sabadoExtra: record.hoursSaturdayExtra || "",
       domingoExtra: record.hoursSundayExtra || "",
+      viernesUltSemana: record.hoursFridayLastWeek || "",
       ultSemana: record.hoursLastWeek || ""
     });
     
@@ -179,6 +181,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
         hoursSaturdayExtra: Number(hours.sabadoExtra) || 0,
         hoursSundayExtra : Number(hours.domingoExtra) || 0,
         hoursLastWeek : Number(hours.ultSemana) || 0,
+        hoursFridayLastWeek: Number(hours.viernesUltSemana) || 0,
         startDate: recordDateStr, 
       };
 
@@ -202,6 +205,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
             sabado:    { normal: Number(hours.sabado || 0), extra: Number(hours.sabadoExtra || 0) },
             domingo:   { normal: Number(hours.domingo || 0), extra: Number(hours.domingoExtra || 0) }
         },
+        hoursFridayLastWeek: Number(hours.viernesUltSemana || 0),
         lastWeekPayment: Number(hours.ultSemana || 0),
         grossTotal: totalAmount,
         advance: Number(advance),
@@ -280,6 +284,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
             />
 
             <SimpleGrid cols={{ base: 2, xs: 3, sm: 4 }} spacing="xs" verticalSpacing="xs">
+              {renderMoneyInput('viernesUltSemana', 'VIE (ANT)')}
               {['sabadoExtra', 'domingoExtra', 'lunesExtra', 'martesExtra', 'miercolesExtra', 'juevesExtra', 'viernesExtra'].map((day) => 
                 renderMoneyInput(day, day.replace('Extra','').slice(0,3).toUpperCase() + ' (EX)')
               )}
@@ -435,7 +440,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                         (record.hoursMondayExtra || 0) + (record.hoursTuesdayExtra || 0) + (record.hoursWednesdayExtra || 0) +
                         (record.hoursThursdayExtra || 0) + (record.hoursFridayExtra || 0) + (record.hoursSaturdayExtra || 0) +
                         (record.hoursSundayExtra || 0) +
-                        (record.hoursLastWeek || 0)
+                        (record.hoursLastWeek || 0) + (record.hoursFridayLastWeek || 0)
                       );
 
                     const isEditingThis = editingId === record.id;
@@ -505,6 +510,12 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                         <Text size="xs" fw={700} c="yellow">${record.hoursLastWeek.toLocaleString('es-AR')}</Text>
                                      </Group>
                                  )}
+                                 {record.hoursFridayLastWeek > 0 && (
+                                     <Group justify="space-between">
+                                        <Text size="xs">Vie. Ant:</Text>
+                                        <Text size="xs" fw={700} c="yellow">${record.hoursFridayLastWeek.toLocaleString('es-AR')}</Text>
+                                     </Group>
+                                 )}
                                </Stack>
                              </Popover.Dropdown>
                            </Popover>
@@ -548,6 +559,7 @@ export const StaffHoursModal = ({ staff, onClose, onSuccess }: StaffHoursModalPr
                                             sabado:    { normal: record.hoursSaturday || 0, extra: record.hoursSaturdayExtra || 0 },
                                             domingo:   { normal: record.hoursSunday || 0, extra: record.hoursSundayExtra || 0 },
                                         },
+                                        hoursFridayLastWeek: record.hoursFridayLastWeek || 0,
                                         lastWeekPayment: record.hoursLastWeek || 0,
                                         grossTotal: grossTotal,
                                         advance: record.advance,
